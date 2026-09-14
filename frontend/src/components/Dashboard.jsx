@@ -4,13 +4,14 @@ import {
 } from 'recharts';
 import { 
   BarChart3, Download, RefreshCw, ArrowUpRight, Search, 
-  ShieldCheck, Layers, Info, Check, Zap, Plane, Activity, Compass
+  ShieldCheck, Layers, Info, Check, Zap, Plane, Activity, Compass, Database
 } from 'lucide-react';
 import { 
   generateTimeSeriesData, TOP_ROUTES_DATA, AIRLINE_BREAKDOWN, 
   BOOKING_WINDOWS, LIVE_MONITORED_CORRIDORS, GOVERNANCE_STATS, SIMULATION_PRESETS
 } from '../data/mockData';
 import AirlineAnalytics from './AirlineAnalytics';
+import LiveDataPanel from './LiveDataPanel';
 
 export default function Dashboard() {
   const [dashboardTab, setDashboardTab] = useState('macro'); // 'macro', 'airlines', 'telemetry'
@@ -145,6 +146,18 @@ export default function Dashboard() {
           >
             <Activity className="w-4 h-4" />
             <span>Corridor Telemetry & Governance</span>
+          </button>
+
+          <button
+            onClick={() => setDashboardTab('live')}
+            className={`pb-3 flex items-center space-x-2 transition-all border-b-2 ${
+              dashboardTab === 'live'
+                ? 'border-emerald-500 text-emerald-400'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Database className="w-4 h-4" />
+            <span>Live Scraped Data ✦</span>
           </button>
         </div>
 
@@ -332,6 +345,11 @@ export default function Dashboard() {
         {/* TAB 2: AIRLINE PRICE INDICES & WEIGHTS */}
         {dashboardTab === 'airlines' && (
           <AirlineAnalytics />
+        )}
+
+        {/* TAB 4: LIVE SCRAPED DATA — real backend */}
+        {dashboardTab === 'live' && (
+          <LiveDataPanel />
         )}
 
         {/* TAB 3: CORRIDOR TELEMETRY & GOVERNANCE */}
