@@ -39,7 +39,7 @@ export default function WhitepaperModal({ isOpen, onClose }) {
               APEX-IND addresses the persistent issue of chain drift in high-frequency airfare indexing
               across Indian domestic aviation routes. Using Jevons price relatives at the elementary level,
               aggregated multilaterally via GEKS-Jevons (Gini-Eltetö-Köves-Szulc) across a rolling window
-              sized to the available data history, APEX-IND provides a transitive, drift-free daily price index base-weighted to official MoSPI expenditure weights.
+              sized to the available data history, APEX-IND provides a transitive, drift-free daily price index route-weighted by real DGCA passenger traffic share.
             </p>
           </div>
 
@@ -82,12 +82,14 @@ export default function WhitepaperModal({ isOpen, onClose }) {
           <div className="space-y-3">
             <h4 className="text-base font-bold text-white flex items-center gap-2">
               <Layers className="w-4 h-4 text-sky-400" />
-              3. MoSPI Expenditure & Volume Weighting
+              3. DGCA Passenger Traffic-Share Weighting
             </h4>
             <p className="text-slate-300">
-              Route weights are recalibrated quarterly using DGCA passenger traffic volume data and 
-              MoSPI (Ministry of Statistics & Programme Implementation) CPI Transport basket weights, 
-              ensuring Delhi-Mumbai or Mumbai-Bengaluru routes carry accurate macro-economic importance.
+              Route weights are calibrated using real DGCA (Directorate General of Civil Aviation)
+              passenger traffic volume data per route, ensuring high-traffic corridors like
+              Delhi-Mumbai or Mumbai-Bengaluru carry proportionally accurate importance in the
+              composite index — deliberately without relying on expenditure-weight data, since
+              scraped price quotes carry none.
             </p>
           </div>
 
