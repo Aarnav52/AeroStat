@@ -13,6 +13,10 @@ dist-ssr
 .env.test.local
 .env.production.local
 
+# Python
+__pycache__/
+*.pyc
+
 # Editor & OS files
 .DS_Store
 *.suo

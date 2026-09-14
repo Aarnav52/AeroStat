@@ -36,10 +36,10 @@ export default function WhitepaperModal({ isOpen, onClose }) {
           <div className="p-5 rounded-2xl bg-sky-950/40 border border-sky-500/30 space-y-2">
             <h4 className="text-xs font-bold text-sky-400 uppercase tracking-wider">Abstract & Scope</h4>
             <p className="text-xs text-slate-300">
-              APEX-IND addresses the persistent issue of chain drift in high-frequency airfare indexing 
-              across Indian domestic aviation routes. By replacing standard chained Laspeyres methods with 
-              Multilateral GEKS (Gini-Eltetö-Köves-Szulc) aggregation across rolling 13-month windows, 
-              APEX-IND provides a transitive, drift-free daily price index base-weighted to official MoSPI expenditure weights.
+              APEX-IND addresses the persistent issue of chain drift in high-frequency airfare indexing
+              across Indian domestic aviation routes. Using Jevons price relatives at the elementary level,
+              aggregated multilaterally via GEKS-Jevons (Gini-Eltetö-Köves-Szulc) across a rolling window
+              sized to the available data history, APEX-IND provides a transitive, drift-free daily price index base-weighted to official MoSPI expenditure weights.
             </p>
           </div>
 
@@ -70,11 +70,11 @@ export default function WhitepaperModal({ isOpen, onClose }) {
             <p className="text-slate-300">
               Chained bilateral indices suffer from non-transitivity ($P_{a,b} \times P_{b,c} \neq P_{a,c}$) 
               when fares bounce back after promotional periods. The Multilateral GEKS index resolves 
-              this by calculating the geometric mean of all bilateral Törnqvist links:
+              this by calculating the geometric mean of all bilateral Jevons links:
             </p>
-            
+
             <div className="p-4 rounded-xl bg-slate-950 border border-sky-500/30 text-center font-mono text-sky-300 text-sm">
-              GEKS<sub>j,k</sub> = &prod;<sub>l=1</sub><sup>M</sup> ( P<sub>j,l</sub><sup>Törnqvist</sup> &bull; P<sub>l,k</sub><sup>Törnqvist</sup> ) <sup>1/M</sup>
+              GEKS<sub>j,k</sub> = &prod;<sub>l=1</sub><sup>M</sup> ( P<sub>j,l</sub><sup>Jevons</sup> &bull; P<sub>l,k</sub><sup>Jevons</sup> ) <sup>1/M</sup>
             </div>
           </div>
 
