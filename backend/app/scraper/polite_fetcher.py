@@ -48,7 +48,18 @@ class PlaywrightTransport:
     require it just to use RequestsTransport.
 
     Launches one browser at construction and reuses it; call close() when
-    done with it."""
+    done with it.
+
+    After get(), the page used for that fetch is kept open on
+    self.last_page - so a caller doing a real search flow (fill a form,
+    click, wait for results) can go through PoliteFetcher.fetch() for the
+    compliance-gated initial navigation (robots.txt, rate limit, circuit
+    breaker all apply), then continue interacting with that SAME,
+    already-permitted page directly, instead of the interactive part
+    silently bypassing the compliance layer with its own raw Playwright
+    session. Contexts accumulate until close() tears down the whole
+    browser - fine for a short-lived scrape run, not meant for a
+    long-running process making many fetches."""
 
     def __init__(self, timeout_seconds=15):
         from playwright.sync_api import sync_playwright
@@ -56,17 +67,20 @@ class PlaywrightTransport:
         self._timeout_ms = timeout_seconds * 1000
         self._playwright = sync_playwright().start()
         self._browser = self._playwright.chromium.launch()
+        self.last_page = None
 
     def get(self, url, headers=None):
         context = self._browser.new_context(extra_http_headers=headers or {})
+        page = context.new_page()
         try:
-            page = context.new_page()
             response = page.goto(url, timeout=self._timeout_ms)
-            status_code = response.status if response else 0
-            text = page.content()
-            return FetchResult(url, status_code, text, dict(response.headers) if response else {})
-        finally:
+        except Exception:
             context.close()
+            raise
+        status_code = response.status if response else 0
+        text = page.content()
+        self.last_page = page
+        return FetchResult(url, status_code, text, dict(response.headers) if response else {})
 
     def close(self):
         self._browser.close()
