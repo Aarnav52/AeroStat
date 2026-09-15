@@ -12,6 +12,66 @@ import time
 import urllib.robotparser
 from urllib.parse import urlparse
 
+import requests
+
+
+class RequestsTransport:
+    """Production transport - real HTTP via the requests library. A real
+    network failure (timeout, connection error, TLS handshake failure -
+    the exact shape seen against IndiGo/Air India during legality
+    research) is not caught here; it propagates to _do_request, which
+    records it as a circuit-breaker failure. Never retried at this layer."""
+
+    def __init__(self, timeout_seconds=15):
+        self._timeout_seconds = timeout_seconds
+
+    def get(self, url, headers=None):
+        response = requests.get(url, headers=headers, timeout=self._timeout_seconds)
+        return FetchResult(
+            url, response.status_code, response.text, dict(response.headers)
+        )
+
+
+class PlaywrightTransport:
+    """Production transport - a real Chromium browser via Playwright, for
+    sites that TLS-fingerprint requests/curl and reset the connection
+    before the handshake even completes (confirmed against Akasa Air and
+    SpiceJet - raw TCP connects fine, but the TLS ClientHello itself gets
+    reset). This is not an anti-detection technique: no automation-hiding
+    flags are set (no --disable-blink-features=AutomationControlled, no
+    proxy, no fingerprint spoofing) - it presents exactly what a real
+    Chromium browser presents, because it is one. If a site's defenses
+    are sophisticated enough to detect and block even this, that block is
+    respected the same as any other bot-challenge, not worked around.
+
+    playwright is imported lazily so the rest of this module doesn't
+    require it just to use RequestsTransport.
+
+    Launches one browser at construction and reuses it; call close() when
+    done with it."""
+
+    def __init__(self, timeout_seconds=15):
+        from playwright.sync_api import sync_playwright
+
+        self._timeout_ms = timeout_seconds * 1000
+        self._playwright = sync_playwright().start()
+        self._browser = self._playwright.chromium.launch()
+
+    def get(self, url, headers=None):
+        context = self._browser.new_context(extra_http_headers=headers or {})
+        try:
+            page = context.new_page()
+            response = page.goto(url, timeout=self._timeout_ms)
+            status_code = response.status if response else 0
+            text = page.content()
+            return FetchResult(url, status_code, text, dict(response.headers) if response else {})
+        finally:
+            context.close()
+
+    def close(self):
+        self._browser.close()
+        self._playwright.stop()
+
 
 class RealClock:
     """Production clock - wall-clock time.monotonic() and a real sleep()."""
@@ -145,17 +205,22 @@ class PoliteFetcher:
         if count >= self._failure_threshold:
             self._circuit_opened_at[host] = self._clock.now()
 
-    def _do_request(self, url):
+    def _do_request(self, url, user_agent):
         """The one place that actually calls the transport. Every fetch -
         robots.txt included - goes through here, so rate limiting,
         bot-challenge detection, and the circuit breaker all apply
-        uniformly rather than only to "real" content fetches."""
+        uniformly rather than only to "real" content fetches.
+
+        Sends the exact same user_agent that robots.txt was checked
+        against - checking one identity's rules while presenting as a
+        different one to the actual server would be a real compliance
+        bug, not just an inconsistency."""
         host = urlparse(url).netloc.lower()
         self._check_circuit(host)  # before rate limiting - no point
         self._enforce_rate_limit(host)  # waiting to reject a request anyway
 
         try:
-            result = self._transport.get(url)
+            result = self._transport.get(url, headers={"User-Agent": user_agent})
         except Exception:
             self._record_failure(host)
             raise
@@ -169,11 +234,11 @@ class PoliteFetcher:
         self._record_success(host)
         return result
 
-    def _get_robots_parser(self, host):
+    def _get_robots_parser(self, host, user_agent):
         if host in self._robots_cache:
             return self._robots_cache[host]
 
-        result = self._do_request(self._robots_url(host))
+        result = self._do_request(self._robots_url(host), user_agent)
         parser = urllib.robotparser.RobotFileParser()
 
         if result.status_code == 200:
@@ -198,9 +263,9 @@ class PoliteFetcher:
         host = urlparse(url).netloc.lower()
         if not host:
             raise ValueError(f"invalid URL: no host found in {url!r}")
-        parser = self._get_robots_parser(host)
+        parser = self._get_robots_parser(host, user_agent)
 
         if not parser.can_fetch(user_agent, url):
             raise RobotsDisallowedError(f"robots.txt disallows fetching {url}")
 
-        return self._do_request(url)
+        return self._do_request(url, user_agent)

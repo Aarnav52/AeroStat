@@ -44,7 +44,7 @@ class FakeTransport:
         self.responses = responses
         self.calls = []
 
-    def get(self, url):
+    def get(self, url, headers=None):
         self.calls.append(url)
         if url not in self.responses:
             raise AssertionError(f"unexpected fetch: {url}")
@@ -287,7 +287,7 @@ def test_transport_exception_propagates_uncaught():
     # propagates as-is. Turning "propagates" into "opens the circuit
     # breaker after N of these" is step 4's job, not this one's.
     class FailingTransport:
-        def get(self, url):
+        def get(self, url, headers=None):
             raise ConnectionError("simulated network failure")
 
     fetcher = PoliteFetcher(FailingTransport())
