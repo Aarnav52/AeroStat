@@ -328,6 +328,28 @@ class JevonsCalculationTests(unittest.TestCase):
             {"real_scraped", "synthetic", "kaggle_seeded"},
         )
 
+    def test_route_and_window_normalization_prevents_split_weights(self):
+        """Mixed route ID and booking window text should normalize to the same analytic grain."""
+        from jevons_engine_cloud import compute_apix_jevons_index  # type: ignore
+
+        rows = [
+            self._base_row("2026-01-01", "1", "AI", "economy", "t+1", 100.0),
+            self._base_row("2026-01-01", 1, "6E", "economy", "T+7", 200.0),
+            self._base_row("2026-02-01", "1.0", "AI", "economy", "T+1", 110.0),
+            self._base_row("2026-02-01", 1, "6E", "economy", "t+7", 220.0),
+        ]
+
+        payload = compute_apix_jevons_index(self._make_df(rows))
+
+        elementary = [p for p in payload if p["index_type"] == "elementary"]
+        self.assertEqual(len(elementary), 2)
+        self.assertEqual({p["route_id"] for p in elementary}, {"1", "1"})
+        self.assertEqual({p["advance_booking_window"] for p in elementary}, {"T+1", "T+7"})
+
+        route = [p for p in payload if p["index_type"] == "route"]
+        self.assertEqual(len(route), 1)
+        self.assertEqual(route[0]["route_id"], "1")
+
     def test_payload_schema_keys_match_sql_schema(self):
         """All payload dicts must contain exactly the expected schema keys."""
         from jevons_engine_cloud import compute_apix_jevons_index  # type: ignore

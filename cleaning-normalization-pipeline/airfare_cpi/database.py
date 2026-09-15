@@ -33,12 +33,21 @@ def database_url() -> str:
     load_dotenv()
     if configured := os.getenv("DATABASE_URL"):
         return configured
+
     required = {key: os.getenv(key) for key in ("user", "password", "host", "port", "database")}
-    missing = [key for key, value in required.items() if not value]
+    missing = [key for key, value in required.items() if value is None or value == ""]
     if missing:
         raise RuntimeError(f"Missing database configuration: {', '.join(missing)}")
-    return "postgresql+psycopg://{user}:{password}@{host}:{port}/{database}".format(
-        user=quote_plus(required["user"]), password=quote_plus(required["password"]), host=required["host"], port=required["port"], database=required["database"]
+
+    user = str(required["user"])
+    password = str(required["password"])
+    host = str(required["host"])
+    port = str(required["port"])
+    database = str(required["database"])
+
+    return (
+        "postgresql+psycopg://"
+        f"{quote_plus(user)}:{quote_plus(password)}@{host}:{port}/{database}"
     )
 
 
