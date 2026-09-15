@@ -12,6 +12,22 @@ from app.scraper.polite_fetcher import (
 )
 
 
+class FakeClock:
+    """Controllable time - never a real sleep(). sleep() just advances
+    the fake clock forward by that amount and records the call."""
+
+    def __init__(self, start=1000.0):
+        self._now = start
+        self.sleep_calls = []
+
+    def now(self):
+        return self._now
+
+    def sleep(self, seconds):
+        self.sleep_calls.append(seconds)
+        self._now += seconds
+
+
 class FakeTransport:
     """Canned responses keyed by exact URL. Records every call made, so
     tests can prove robots.txt goes through this same path, not some
@@ -35,7 +51,7 @@ def test_disallowed_path_raises():
             "User-agent: *\nDisallow: /private/\n",
         ),
     })
-    fetcher = PoliteFetcher(transport)
+    fetcher = PoliteFetcher(transport, min_request_interval=0)
     try:
         fetcher.fetch("https://example.com/private/secret")
         raise AssertionError("expected RobotsDisallowedError")
@@ -53,7 +69,7 @@ def test_allowed_path_succeeds():
             "https://example.com/public/page", 200, "hello",
         ),
     })
-    fetcher = PoliteFetcher(transport)
+    fetcher = PoliteFetcher(transport, min_request_interval=0)
     result = fetcher.fetch("https://example.com/public/page")
     assert result.text == "hello"
 
@@ -67,7 +83,7 @@ def test_robots_txt_fetched_through_same_transport():
             "https://example.com/page", 200, "ok",
         ),
     })
-    fetcher = PoliteFetcher(transport)
+    fetcher = PoliteFetcher(transport, min_request_interval=0)
     fetcher.fetch("https://example.com/page")
     assert transport.calls == [
         "https://example.com/robots.txt",
@@ -83,7 +99,7 @@ def test_robots_txt_cached_not_refetched():
         "https://example.com/a": FetchResult("https://example.com/a", 200, "a"),
         "https://example.com/b": FetchResult("https://example.com/b", 200, "b"),
     })
-    fetcher = PoliteFetcher(transport)
+    fetcher = PoliteFetcher(transport, min_request_interval=0)
     fetcher.fetch("https://example.com/a")
     fetcher.fetch("https://example.com/b")
     robots_fetches = [c for c in transport.calls if c.endswith("/robots.txt")]
@@ -99,7 +115,7 @@ def test_missing_robots_txt_means_allowed():
             "https://example.com/page", 200, "ok",
         ),
     })
-    fetcher = PoliteFetcher(transport)
+    fetcher = PoliteFetcher(transport, min_request_interval=0)
     result = fetcher.fetch("https://example.com/page")
     assert result.text == "ok"
 
@@ -113,7 +129,7 @@ def test_robots_txt_401_means_disallow_all():
             "https://example.com/robots.txt", 401, "",
         ),
     })
-    fetcher = PoliteFetcher(transport)
+    fetcher = PoliteFetcher(transport, min_request_interval=0)
     try:
         fetcher.fetch("https://example.com/anything")
         raise AssertionError("expected RobotsDisallowedError")
@@ -130,7 +146,7 @@ def test_robots_txt_403_is_a_bot_challenge_not_a_policy_disallow():
             "https://example.com/robots.txt", 403, "",
         ),
     })
-    fetcher = PoliteFetcher(transport)
+    fetcher = PoliteFetcher(transport, min_request_interval=0)
     try:
         fetcher.fetch("https://example.com/anything")
         raise AssertionError("expected BotChallengeDetectedError")
@@ -147,7 +163,7 @@ def test_bot_challenge_status_code_raises_and_is_not_retried():
             "https://example.com/page", 429, "slow down",
         ),
     })
-    fetcher = PoliteFetcher(transport)
+    fetcher = PoliteFetcher(transport, min_request_interval=0)
     try:
         fetcher.fetch("https://example.com/page")
         raise AssertionError("expected BotChallengeDetectedError")
@@ -167,7 +183,7 @@ def test_bot_challenge_text_marker_raises_even_on_200():
             "<html>Please complete the CAPTCHA to continue</html>",
         ),
     })
-    fetcher = PoliteFetcher(transport)
+    fetcher = PoliteFetcher(transport, min_request_interval=0)
     try:
         fetcher.fetch("https://example.com/page")
         raise AssertionError("expected BotChallengeDetectedError")
@@ -186,7 +202,7 @@ def test_503_status_code_is_a_bot_challenge():
             "https://example.com/page", 503, "service unavailable",
         ),
     })
-    fetcher = PoliteFetcher(transport)
+    fetcher = PoliteFetcher(transport, min_request_interval=0)
     try:
         fetcher.fetch("https://example.com/page")
         raise AssertionError("expected BotChallengeDetectedError")
@@ -205,7 +221,7 @@ def test_403_on_content_fetch_is_also_a_bot_challenge():
             "https://example.com/page", 403, "forbidden",
         ),
     })
-    fetcher = PoliteFetcher(transport)
+    fetcher = PoliteFetcher(transport, min_request_interval=0)
     try:
         fetcher.fetch("https://example.com/page")
         raise AssertionError("expected BotChallengeDetectedError")
@@ -225,7 +241,7 @@ def test_cloudflare_marker_detected():
             "<html>Checking your browser before accessing... Cloudflare</html>",
         ),
     })
-    fetcher = PoliteFetcher(transport)
+    fetcher = PoliteFetcher(transport, min_request_interval=0)
     try:
         fetcher.fetch("https://example.com/page")
         raise AssertionError("expected BotChallengeDetectedError")
@@ -243,7 +259,7 @@ def test_hostname_case_is_normalized_for_robots_cache():
         "https://Example.com/a": FetchResult("https://Example.com/a", 200, "a"),
         "https://example.com/b": FetchResult("https://example.com/b", 200, "b"),
     })
-    fetcher = PoliteFetcher(transport)
+    fetcher = PoliteFetcher(transport, min_request_interval=0)
     fetcher.fetch("https://Example.com/a")
     fetcher.fetch("https://example.com/b")
     robots_fetches = [c for c in transport.calls if c.endswith("/robots.txt")]
@@ -270,7 +286,7 @@ def test_transport_exception_propagates_uncaught():
 
 def test_malformed_url_raises_value_error_fast():
     transport = FakeTransport({})
-    fetcher = PoliteFetcher(transport)
+    fetcher = PoliteFetcher(transport, min_request_interval=0)
     try:
         fetcher.fetch("not-a-real-url")
         raise AssertionError("expected ValueError")
@@ -288,9 +304,78 @@ def test_none_text_does_not_crash_bot_challenge_check():
             "https://example.com/page", 200, None,
         ),
     })
-    fetcher = PoliteFetcher(transport)
+    fetcher = PoliteFetcher(transport, min_request_interval=0)
     result = fetcher.fetch("https://example.com/page")
     assert result.text is None
+
+
+def test_rate_limit_delays_second_request_to_same_host():
+    transport = FakeTransport({
+        "https://example.com/robots.txt": FetchResult(
+            "https://example.com/robots.txt", 200, "User-agent: *\nAllow: /\n",
+        ),
+        "https://example.com/a": FetchResult("https://example.com/a", 200, "a"),
+        "https://example.com/b": FetchResult("https://example.com/b", 200, "b"),
+    })
+    clock = FakeClock()
+    fetcher = PoliteFetcher(transport, clock=clock, min_request_interval=1.0)
+
+    fetcher.fetch("https://example.com/a")
+    # robots.txt then /a were both to example.com, back to back - the
+    # second of those two should already have triggered one wait.
+    assert len(clock.sleep_calls) == 1, clock.sleep_calls
+
+    fetcher.fetch("https://example.com/b")
+    # /b is a third request to the same host, still with no real time
+    # having passed - must wait again.
+    assert len(clock.sleep_calls) == 2, clock.sleep_calls
+
+
+def test_rate_limit_does_not_leak_across_hosts():
+    transport = FakeTransport({
+        "https://a.com/robots.txt": FetchResult(
+            "https://a.com/robots.txt", 200, "User-agent: *\nAllow: /\n",
+        ),
+        "https://a.com/page": FetchResult("https://a.com/page", 200, "a"),
+        "https://b.com/robots.txt": FetchResult(
+            "https://b.com/robots.txt", 200, "User-agent: *\nAllow: /\n",
+        ),
+        "https://b.com/page": FetchResult("https://b.com/page", 200, "b"),
+    })
+    clock = FakeClock()
+    fetcher = PoliteFetcher(transport, clock=clock, min_request_interval=1.0)
+
+    fetcher.fetch("https://a.com/page")
+    calls_after_a = len(clock.sleep_calls)
+
+    # b.com has never been requested before - its first-ever request must
+    # not wait because a.com was just hit.
+    fetcher.fetch("https://b.com/page")
+    robots_and_page_for_b = 1  # b's own robots.txt -> b's own page, one wait
+    assert len(clock.sleep_calls) == calls_after_a + robots_and_page_for_b, (
+        clock.sleep_calls
+    )
+
+
+def test_rate_limit_no_wait_if_enough_time_already_passed():
+    transport = FakeTransport({
+        "https://example.com/robots.txt": FetchResult(
+            "https://example.com/robots.txt", 200, "User-agent: *\nAllow: /\n",
+        ),
+        "https://example.com/a": FetchResult("https://example.com/a", 200, "a"),
+        "https://example.com/b": FetchResult("https://example.com/b", 200, "b"),
+    })
+    clock = FakeClock()
+    fetcher = PoliteFetcher(transport, clock=clock, min_request_interval=1.0)
+
+    fetcher.fetch("https://example.com/a")
+    clock._now += 10.0  # plenty of real time passes between requests
+    calls_before = len(clock.sleep_calls)
+
+    fetcher.fetch("https://example.com/b")
+    assert len(clock.sleep_calls) == calls_before, (
+        "no wait should be needed - 10s already passed"
+    )
 
 
 def test_cannot_disable_robots_check():

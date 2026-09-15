@@ -3,14 +3,25 @@ PoliteFetcher: the shared, compliance-first HTTP fetch layer every
 source-specific adapter must go through - no adapter gets its own direct
 requests (per CODING_AGENT_CONTEXT.md's spec).
 
-Built step by step. This file currently covers steps 1-2: robots.txt
-enforcement and bot-challenge detection, both routed through the same
-request path. Per-host rate limiting and the circuit breaker land in
-later steps.
+Built step by step. This file currently covers steps 1-3: robots.txt
+enforcement, bot-challenge detection, and per-host rate limiting - all
+routed through the same request path. The circuit breaker lands in a
+later step.
 """
 
+import time
 import urllib.robotparser
 from urllib.parse import urlparse
+
+
+class RealClock:
+    """Production clock - wall-clock time.monotonic() and a real sleep()."""
+
+    def now(self):
+        return time.monotonic()
+
+    def sleep(self, seconds):
+        time.sleep(seconds)
 
 
 class RobotsDisallowedError(Exception):
@@ -65,19 +76,41 @@ class PoliteFetcher:
     parameter exists for it. Passing one anyway raises TypeError, Python's
     ordinary behavior for an unexpected keyword argument - not a config
     flag that could be flipped on by mistake.
+
+    Rate limiting is tracked per host, not globally - a slow or blocked
+    host must not throttle requests to a different, working one. It
+    applies to every actual network call, robots.txt fetches included,
+    since those go to the same host too.
     """
 
-    def __init__(self, transport):
+    def __init__(self, transport, clock=None, min_request_interval=1.0):
         self._transport = transport
+        self._clock = clock or RealClock()
+        self._min_request_interval = min_request_interval
         self._robots_cache = {}  # host -> urllib.robotparser.RobotFileParser
+        self._last_request_time = {}  # host -> clock.now() at last request
 
     def _robots_url(self, host):
         return f"https://{host}/robots.txt"
 
+    def _enforce_rate_limit(self, host):
+        last = self._last_request_time.get(host)
+        now = self._clock.now()
+        if last is not None:
+            wait = self._min_request_interval - (now - last)
+            if wait > 0:
+                self._clock.sleep(wait)
+                now = self._clock.now()
+        self._last_request_time[host] = now
+
     def _do_request(self, url):
         """The one place that actually calls the transport. Every fetch -
-        robots.txt included - goes through here, so bot-challenge detection
-        applies uniformly rather than only to "real" content fetches."""
+        robots.txt included - goes through here, so rate limiting and
+        bot-challenge detection apply uniformly rather than only to "real"
+        content fetches."""
+        host = urlparse(url).netloc.lower()
+        self._enforce_rate_limit(host)
+
         result = self._transport.get(url)
         if _looks_like_bot_challenge(result):
             raise BotChallengeDetectedError(
