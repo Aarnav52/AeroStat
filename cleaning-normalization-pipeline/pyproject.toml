@@ -1,0 +1,15 @@
+[project]
+name = "airfare-cpi"
+version = "0.1.0"
+description = "Auditable airfare observation cleaning pipeline"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "pandas>=2.2",
+    "SQLAlchemy>=2.0",
+    "psycopg[binary]>=3.2",
+    "python-dotenv>=1.0",
+]
+
+[tool.setuptools]
+packages = ["airfare_cpi"]
