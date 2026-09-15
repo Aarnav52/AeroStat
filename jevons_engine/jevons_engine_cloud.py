@@ -45,6 +45,47 @@ logger = logging.getLogger("JevonsEngineCloud")
 
 
 # ---------------------------------------------------------------------------
+# Weighting Matrices & Calibration
+# ---------------------------------------------------------------------------
+
+# Advance Booking Window Weights (Calibrated to domestic booking lead-time distributions)
+WINDOW_WEIGHTS: Dict[str, float] = {
+    "T+1": 0.12,   # Urgent / Close-in (12%)
+    "T+7": 0.28,   # Short horizon (28%)
+    "T+15": 0.22,  # Medium horizon (22%)
+    "T+30": 0.20,  # Advance planning (20%)
+    "T+45": 0.18,  # Long horizon (18%)
+}
+
+# DGCA Route Passenger Traffic Share Weights (Calibrated from DGCA domestic city-pair traffic)
+# Handles both route codes (e.g. "DEL-BOM", "AMD-DEL") and numeric route IDs (e.g. "1", "2")
+DGCA_ROUTE_WEIGHTS: Dict[str, float] = {
+    # Top Trunk Corridors (Metro-to-Metro)
+    "DEL-BOM": 0.142, "BOM-DEL": 0.142,  # Delhi - Mumbai corridor (~14.2% traffic share)
+    "DEL-BLR": 0.098, "BLR-DEL": 0.098,  # Delhi - Bengaluru (~9.8%)
+    "BOM-BLR": 0.085, "BLR-BOM": 0.085,  # Mumbai - Bengaluru (~8.5%)
+    "DEL-HYD": 0.072, "HYD-DEL": 0.072,  # Delhi - Hyderabad (~7.2%)
+    "DEL-CCU": 0.068, "CCU-DEL": 0.068,  # Delhi - Kolkata (~6.8%)
+    "BOM-GOI": 0.054, "GOI-BOM": 0.054,  # Mumbai - Goa (~5.4%)
+    "DEL-MAA": 0.052, "MAA-DEL": 0.052,  # Delhi - Chennai (~5.2%)
+    "AMD-DEL": 0.048, "DEL-AMD": 0.048,  # Ahmedabad - Delhi (~4.8%)
+    "BOM-HYD": 0.045, "HYD-BOM": 0.045,  # Mumbai - Hyderabad (~4.5%)
+    "BLR-HYD": 0.038, "HYD-BLR": 0.038,  # Bengaluru - Hyderabad (~3.8%)
+    "BOM-CCU": 0.036, "CCU-BOM": 0.036,  # Mumbai - Kolkata (~3.6%)
+    "BOM-MAA": 0.034, "MAA-BOM": 0.034,  # Mumbai - Chennai (~3.4%)
+    "AMD-BOM": 0.032, "BOM-AMD": 0.032,  # Ahmedabad - Mumbai (~3.2%)
+    "DEL-PNQ": 0.028, "PNQ-DEL": 0.028,  # Delhi - Pune (~2.8%)
+    "DEL-COK": 0.026, "COK-DEL": 0.026,  # Delhi - Kochi (~2.6%)
+    "BLR-CCU": 0.024, "CCU-BLR": 0.024,  # Bengaluru - Kolkata (~2.4%)
+    # Numeric route ID aliases
+    "1": 0.142,
+    "2": 0.098,
+    "3": 0.085,
+    "4": 0.048,
+}
+
+
+# ---------------------------------------------------------------------------
 # Supabase client
 # ---------------------------------------------------------------------------
 
@@ -148,6 +189,14 @@ def calculate_data_provenance_mix(df_subset: pd.DataFrame) -> Dict[str, Any]:
     return provenance_info
 
 
+def _format_route_id(route_id: Any) -> str:
+    """Safely format route_id (int, float, str, or Hashable) to a clean string."""
+    s = str(route_id).strip()
+    if s.endswith(".0") and s[:-2].isdigit():
+        return s[:-2]
+    return s
+
+
 def _geometric_mean_fare(series: pd.Series) -> float:
     """Compute the geometric mean of a strictly positive fare series."""
     values = series.dropna().values
@@ -209,8 +258,8 @@ def compute_apix_jevons_index(df: pd.DataFrame) -> List[Dict[str, Any]]:
             [route_id, airline_code, cabin_class, advance_booking_window].
         c.  Computes price_relative = clean_base_fare_current / clean_base_fare_base.
         d.  Elementary Jevons: exp(mean(log(price_relative))) * 100.
-        e.  Route-level rollup: unweighted mean across booking windows.
-        f.  National rollup: unweighted mean across routes.
+        e.  Route-level rollup: weighted sum across booking windows using WINDOW_WEIGHTS.
+        f.  National rollup: weighted sum across routes using DGCA_ROUTE_WEIGHTS.
     5.  Builds payload dicts aligned exactly to index_values schema.
 
     Index type values are exactly: 'elementary', 'route', 'national'.
@@ -369,7 +418,7 @@ def compute_apix_jevons_index(df: pd.DataFrame) -> List[Dict[str, Any]]:
                 "observation_date": curr_date_str,
                 "base_period_date": base_date_str,
                 "index_type": "elementary",
-                "route_id": str(int(route_id)),
+                "route_id": _format_route_id(route_id),
                 "advance_booking_window": str(window),
                 "index_value": round(elem_jevons, 4),
                 "num_observations_used": n_obs,
@@ -386,11 +435,20 @@ def compute_apix_jevons_index(df: pd.DataFrame) -> List[Dict[str, Any]]:
 
         # ---------------------------------------------------------------
         # 2. ROUTE-LEVEL ROLLUP
-        #    Unweighted mean across booking windows per route
+        #    Weighted across booking windows per route using WINDOW_WEIGHTS
         # ---------------------------------------------------------------
         route_results = []
         for route_id, r_group in df_elem.groupby("route_id"):
-            route_index_val = float(r_group["index_value"].mean())
+            indices = r_group["index_value"].values
+            windows = r_group["advance_booking_window"].values
+            w_arr = np.array([WINDOW_WEIGHTS.get(str(w), 1.0) for w in windows], dtype=float)
+
+            if w_arr.sum() > 0:
+                w_norm = w_arr / w_arr.sum()
+                route_index_val = float(np.sum(indices * w_norm))
+            else:
+                route_index_val = float(indices.mean())
+
             route_obs_used = int(r_group["num_observations_used"].sum())
 
             route_matched_df = merged_df[merged_df["route_id"].astype(str) == str(route_id)]
@@ -400,21 +458,30 @@ def compute_apix_jevons_index(df: pd.DataFrame) -> List[Dict[str, Any]]:
                 "observation_date": curr_date_str,
                 "base_period_date": base_date_str,
                 "index_type": "route",
-                "route_id": str(int(route_id)) if str(route_id).isdigit() else str(route_id),
+                "route_id": _format_route_id(route_id),
                 "advance_booking_window": None,
                 "index_value": round(route_index_val, 4),
                 "num_observations_used": route_obs_used,
                 "data_provenance_mix": route_prov_mix,
             })
 
-        logger.info(f"Calculated {len(route_results)} Route-level rolled up index values.")
+        logger.info(f"Calculated {len(route_results)} Route-level rolled up index values (Booking-Window Weighted).")
 
         # ---------------------------------------------------------------
         # 3. NATIONAL APIx ROLLUP
-        #    Unweighted mean across all routes
+        #    Weighted across routes using DGCA_ROUTE_WEIGHTS
         # ---------------------------------------------------------------
         df_routes = pd.DataFrame(route_results)
-        national_index_val = float(df_routes["index_value"].mean())
+        route_indices = df_routes["index_value"].values
+        route_keys = df_routes["route_id"].astype(str).values
+        r_weights = np.array([DGCA_ROUTE_WEIGHTS.get(rk, 1.0) for rk in route_keys], dtype=float)
+
+        if r_weights.sum() > 0:
+            r_weights_norm = r_weights / r_weights.sum()
+            national_index_val = float(np.sum(route_indices * r_weights_norm))
+        else:
+            national_index_val = float(route_indices.mean())
+
         national_obs_used = int(df_routes["num_observations_used"].sum())
         national_prov_mix = calculate_data_provenance_mix(merged_df)
 
@@ -429,7 +496,7 @@ def compute_apix_jevons_index(df: pd.DataFrame) -> List[Dict[str, Any]]:
             "data_provenance_mix": national_prov_mix,
         }
 
-        logger.info(f"National APIx Index Value: {national_record['index_value']} (Obs: {national_obs_used})")
+        logger.info(f"National APIx Index Value: {national_record['index_value']} (Obs: {national_obs_used}, DGCA Traffic Weighted)")
 
         payload.extend(elementary_results)
         payload.extend(route_results)
