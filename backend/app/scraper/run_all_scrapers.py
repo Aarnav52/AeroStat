@@ -38,11 +38,11 @@ def get_active_routes(conn):
         return [dict(zip(cols, row)) for row in cur.fetchall()]
 
 
-def direct_flight_to_observation(flight, route_id, window, departure_date):
+def direct_flight_to_observation(flight, route_id, window, departure_date, scrape_timestamp):
     return {
         "airline_name": flight["airline_name"],
         "flight_number": flight["flight_number"],
-        "scrape_timestamp": datetime.datetime.now(IST).isoformat(),
+        "scrape_timestamp": scrape_timestamp,
         "departure_date": departure_date,
         "departure_time": flight["departure_time"],
         "advance_booking_window": window,
@@ -67,8 +67,11 @@ def _store_flights(conn, flights, source_name, route, window, target_date):
     if not flights:
         return 0
     source_id = get_or_create_source(conn, source_name, "airline_direct")
+    # One timestamp for every observation in this scrape, matching the SerpApi path.
+    scrape_timestamp = datetime.datetime.now(IST).isoformat()
     observations = [
-        direct_flight_to_observation(f, route["route_id"], window, target_date) for f in flights
+        direct_flight_to_observation(f, route["route_id"], window, target_date, scrape_timestamp)
+        for f in flights
     ]
     return insert_observations(conn, observations, route["route_id"], source_id)
 
