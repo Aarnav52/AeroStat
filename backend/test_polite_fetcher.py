@@ -268,6 +268,31 @@ def test_transport_exception_propagates_uncaught():
         pass
 
 
+def test_malformed_url_raises_value_error_fast():
+    transport = FakeTransport({})
+    fetcher = PoliteFetcher(transport)
+    try:
+        fetcher.fetch("not-a-real-url")
+        raise AssertionError("expected ValueError")
+    except ValueError:
+        pass
+    assert transport.calls == [], "must fail before ever touching the network"
+
+
+def test_none_text_does_not_crash_bot_challenge_check():
+    transport = FakeTransport({
+        "https://example.com/robots.txt": FetchResult(
+            "https://example.com/robots.txt", 200, "User-agent: *\nAllow: /\n",
+        ),
+        "https://example.com/page": FetchResult(
+            "https://example.com/page", 200, None,
+        ),
+    })
+    fetcher = PoliteFetcher(transport)
+    result = fetcher.fetch("https://example.com/page")
+    assert result.text is None
+
+
 def test_cannot_disable_robots_check():
     transport = FakeTransport({})
     try:

@@ -40,7 +40,7 @@ _BOT_CHALLENGE_MARKERS = (
 def _looks_like_bot_challenge(result):
     if result.status_code in _BOT_CHALLENGE_STATUS_CODES:
         return True
-    lowered = result.text.lower()
+    lowered = (result.text or "").lower()
     return any(marker in lowered for marker in _BOT_CHALLENGE_MARKERS)
 
 
@@ -112,6 +112,8 @@ class PoliteFetcher:
         # Hostnames are case-insensitive; lowercase before caching so
         # Example.com and example.com share one robots.txt fetch.
         host = urlparse(url).netloc.lower()
+        if not host:
+            raise ValueError(f"invalid URL: no host found in {url!r}")
         parser = self._get_robots_parser(host)
 
         if not parser.can_fetch(user_agent, url):
