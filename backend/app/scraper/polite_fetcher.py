@@ -109,7 +109,9 @@ class PoliteFetcher:
         return parser
 
     def fetch(self, url, user_agent="APIx-PoliteFetcher/1.0"):
-        host = urlparse(url).netloc
+        # Hostnames are case-insensitive; lowercase before caching so
+        # Example.com and example.com share one robots.txt fetch.
+        host = urlparse(url).netloc.lower()
         parser = self._get_robots_parser(host)
 
         if not parser.can_fetch(user_agent, url):

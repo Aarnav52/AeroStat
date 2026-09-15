@@ -175,6 +175,99 @@ def test_bot_challenge_text_marker_raises_even_on_200():
         pass
 
 
+def test_503_status_code_is_a_bot_challenge():
+    # 429 is already covered above; 503 is separately named in the spec
+    # and must be checked explicitly, not assumed to work by similarity.
+    transport = FakeTransport({
+        "https://example.com/robots.txt": FetchResult(
+            "https://example.com/robots.txt", 200, "User-agent: *\nAllow: /\n",
+        ),
+        "https://example.com/page": FetchResult(
+            "https://example.com/page", 503, "service unavailable",
+        ),
+    })
+    fetcher = PoliteFetcher(transport)
+    try:
+        fetcher.fetch("https://example.com/page")
+        raise AssertionError("expected BotChallengeDetectedError")
+    except BotChallengeDetectedError:
+        pass
+
+
+def test_403_on_content_fetch_is_also_a_bot_challenge():
+    # Distinct from the robots.txt-specific 403 test above - confirms the
+    # same detection applies to the actual content fetch, not just robots.txt.
+    transport = FakeTransport({
+        "https://example.com/robots.txt": FetchResult(
+            "https://example.com/robots.txt", 200, "User-agent: *\nAllow: /\n",
+        ),
+        "https://example.com/page": FetchResult(
+            "https://example.com/page", 403, "forbidden",
+        ),
+    })
+    fetcher = PoliteFetcher(transport)
+    try:
+        fetcher.fetch("https://example.com/page")
+        raise AssertionError("expected BotChallengeDetectedError")
+    except BotChallengeDetectedError:
+        pass
+
+
+def test_cloudflare_marker_detected():
+    # Spot-check a second marker, not just "captcha" - confirms the list
+    # is actually wired in, not just the detection mechanism in the abstract.
+    transport = FakeTransport({
+        "https://example.com/robots.txt": FetchResult(
+            "https://example.com/robots.txt", 200, "User-agent: *\nAllow: /\n",
+        ),
+        "https://example.com/page": FetchResult(
+            "https://example.com/page", 200,
+            "<html>Checking your browser before accessing... Cloudflare</html>",
+        ),
+    })
+    fetcher = PoliteFetcher(transport)
+    try:
+        fetcher.fetch("https://example.com/page")
+        raise AssertionError("expected BotChallengeDetectedError")
+    except BotChallengeDetectedError:
+        pass
+
+
+def test_hostname_case_is_normalized_for_robots_cache():
+    # Example.com and example.com must share one robots.txt fetch, not be
+    # treated as different hosts.
+    transport = FakeTransport({
+        "https://example.com/robots.txt": FetchResult(
+            "https://example.com/robots.txt", 200, "User-agent: *\nAllow: /\n",
+        ),
+        "https://Example.com/a": FetchResult("https://Example.com/a", 200, "a"),
+        "https://example.com/b": FetchResult("https://example.com/b", 200, "b"),
+    })
+    fetcher = PoliteFetcher(transport)
+    fetcher.fetch("https://Example.com/a")
+    fetcher.fetch("https://example.com/b")
+    robots_fetches = [c for c in transport.calls if c.endswith("/robots.txt")]
+    assert len(robots_fetches) == 1, robots_fetches
+
+
+def test_transport_exception_propagates_uncaught():
+    # Documents current, deliberate behavior: a real network failure (the
+    # same shape as the IndiGo/Air India TLS-timeout case found during
+    # legality research) is not swallowed or silently retried here - it
+    # propagates as-is. Turning "propagates" into "opens the circuit
+    # breaker after N of these" is step 4's job, not this one's.
+    class FailingTransport:
+        def get(self, url):
+            raise ConnectionError("simulated network failure")
+
+    fetcher = PoliteFetcher(FailingTransport())
+    try:
+        fetcher.fetch("https://example.com/page")
+        raise AssertionError("expected ConnectionError to propagate")
+    except ConnectionError:
+        pass
+
+
 def test_cannot_disable_robots_check():
     transport = FakeTransport({})
     try:
