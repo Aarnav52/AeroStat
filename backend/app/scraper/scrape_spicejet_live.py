@@ -11,7 +11,7 @@ HTML form like Akasa's) - inputs lack normal name/placeholder attributes
 and some elements needed a position click / force click rather than
 text-based selectors. Noted inline where that's why.
 
-Run directly: python scrape_spicejet_live.py
+Run from backend/: python -m app.scraper.scrape_spicejet_live
 """
 
 import re

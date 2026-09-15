@@ -9,7 +9,7 @@ search-form interaction (fill/click/wait, which isn't a "fetch a new
 URL" operation PoliteFetcher's interface models) continues directly on
 that same, already-permitted page via transport.last_page.
 
-Run directly: python scrape_akasa_live.py
+Run from backend/: python -m app.scraper.scrape_akasa_live
 """
 
 import re

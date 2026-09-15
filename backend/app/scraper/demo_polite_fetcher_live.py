@@ -5,7 +5,7 @@ Plan_yug.md's Session Addendum), plus one confirmed-blocked site (IndiGo)
 included on purpose to show the compliance layer correctly refusing
 rather than evading.
 
-This makes real network calls. Run directly: python demo_polite_fetcher_live.py
+This makes real network calls. Run from backend/: python -m app.scraper.demo_polite_fetcher_live
 """
 
 import time
