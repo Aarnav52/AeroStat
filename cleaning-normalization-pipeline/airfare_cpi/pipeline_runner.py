@@ -12,6 +12,7 @@ from .pipeline import (
     profile_data,
     recalculate_lead_time,
     validate_booking_window,
+    validate_currency,
     validate_prices,
     validate_timestamps,
     validate_types,
@@ -26,6 +27,7 @@ def clean_raw_observations(raw_observations: pd.DataFrame):
     enriched_observations, lead_time_issues = recalculate_lead_time(normalized_observations)
     timestamp_issues = validate_timestamps(enriched_observations)
     booking_window_issues = validate_booking_window(enriched_observations)
+    currency_issues = validate_currency(enriched_observations)
     price_issues = validate_prices(enriched_observations)
     duplicate_issues = detect_duplicates(enriched_observations)
     outlier_issues = detect_outliers(enriched_observations)
@@ -35,12 +37,13 @@ def clean_raw_observations(raw_observations: pd.DataFrame):
         timestamp_issues,
         lead_time_issues,
         booking_window_issues,
+        currency_issues,
         price_issues,
         duplicate_issues,
         outlier_issues,
         cross_source_issues,
     ])
-    cleaned_observations = build_cleaned_observations(enriched_observations)
+    cleaned_observations = build_cleaned_observations(enriched_observations, quality_flags=quality_flags)
     return cleaned_observations, quality_flags
 
 

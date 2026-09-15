@@ -26,6 +26,21 @@ def prepare_cleaned_observations_table(cleaned_observations: pd.DataFrame) -> pd
     table = table.rename(columns={"base_fare": "clean_base_fare"})
     table["observation_date"] = pd.to_datetime(table["observation_date"], errors="coerce").dt.date
     table["clean_base_fare"] = pd.to_numeric(table["clean_base_fare"], errors="coerce")
+    table["flight_number"] = table["flight_number"].astype("string").str.strip()
+
+    valid_mask = (
+        table["observation_id"].notna()
+        & table["observation_date"].notna()
+        & table["route_id"].notna()
+        & table["flight_number"].notna()
+        & table["flight_number"].ne("")
+        & ~table["flight_number"].str.lower().isin(["nan", "none", "<na>"])
+        & table["clean_base_fare"].notna()
+        & (table["clean_base_fare"] > 0)
+        & table["advance_booking_window"].isin(["T+1", "T+7", "T+15", "T+30", "T+45"])
+    )
+    table = table[valid_mask].copy()
+    table = table.drop_duplicates(subset=["observation_id"])
     return table[CANONICAL_COLUMNS]
 
 
@@ -38,19 +53,19 @@ def write_cleaned_observations_table(table: pd.DataFrame, db_engine) -> int:
     with db_engine.begin() as connection:
         connection.execute(text("""
             CREATE TABLE IF NOT EXISTS cleaned_observations_table (
-                observation_id TEXT,
-                observation_date DATE,
-                route_id INTEGER,
-                flight_number TEXT,
-                cabin_class TEXT,
-                advance_booking_window TEXT,
-                clean_base_fare NUMERIC(10,2),
-                data_provenance TEXT
+                observation_id TEXT PRIMARY KEY,
+                observation_date DATE NOT NULL,
+                route_id INTEGER NOT NULL,
+                flight_number TEXT NOT NULL,
+                cabin_class TEXT NOT NULL,
+                advance_booking_window TEXT NOT NULL,
+                clean_base_fare NUMERIC(10,2) NOT NULL,
+                data_provenance TEXT NOT NULL
             )
         """))
         connection.execute(text("TRUNCATE TABLE cleaned_observations_table"))
         table.to_sql(
             "cleaned_observations_table", connection, if_exists="append", index=False, chunksize=500, method="multi",
             dtype={"observation_id": Text(), "observation_date": Date(), "route_id": Integer(), "clean_base_fare": Numeric(10, 2)},
-        )
+        ) 
     return len(table)

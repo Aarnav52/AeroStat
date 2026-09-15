@@ -22,6 +22,7 @@ from .pipeline import (
     QualityIssue,
     recalculate_lead_time,
     validate_booking_window,
+    validate_currency,
     validate_prices,
     validate_timestamps,
     validate_types,
@@ -139,7 +140,7 @@ def run_csv_pipeline(csv_path: Path, db_engine) -> dict:
         QualityIssue(row.get("observation_id", row.name), "sold_out_excluded", "sold-out record excluded from price analytics")
         for _, row in enriched[enriched["scrape_status"] == "sold_out"].iterrows()
     ]
-    issues = [type_issues, validate_timestamps(enriched), lead_issues, validate_booking_window(enriched), validate_prices(enriched), detect_duplicates(enriched), detect_outliers(enriched), detect_cross_source_mismatches(enriched), sold_out]
+    issues = [type_issues, validate_timestamps(enriched), lead_issues, validate_booking_window(enriched), validate_currency(enriched), validate_prices(enriched), detect_duplicates(enriched), detect_outliers(enriched), detect_cross_source_mismatches(enriched), sold_out]
     flags = generate_quality_flags(issues)
     with db_engine.begin() as connection:
         raw_ids = _insert_raw(connection, raw_frame, csv_path.name)

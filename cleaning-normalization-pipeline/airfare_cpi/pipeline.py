@@ -59,6 +59,15 @@ def validate_types(frame: pd.DataFrame):
         for _, row in invalid_rows.iterrows():
             issues.append(_issue(row, "confirmed_error", f"{column} is not numeric"))
 
+    if "flight_number" in result.columns:
+        invalid_fn = (
+            result["flight_number"].isna()
+            | (result["flight_number"].astype(str).str.strip() == "")
+            | (result["flight_number"].astype(str).str.strip().str.lower().isin(["nan", "none", "<na>"]))
+        )
+        for _, row in result[invalid_fn].iterrows():
+            issues.append(_issue(row, "confirmed_error", "flight_number is missing or invalid"))
+
     for column in ["scrape_timestamp", "created_at"]:
         if column in result.columns:
             result[column] = pd.to_datetime(result[column], errors="coerce", utc=True)
@@ -103,6 +112,20 @@ def normalize_categories(frame: pd.DataFrame) -> pd.DataFrame:
         result["advance_booking_window"] = result["advance_booking_window"].astype("string").str.strip().str.upper()
 
     return result
+
+
+# Verify that currency is valid and supported for domestic index calculation.
+def validate_currency(frame: pd.DataFrame):
+    issues = []
+    if "currency" not in frame.columns:
+        return issues
+    for _, row in frame.iterrows():
+        curr = row.get("currency")
+        if pd.isna(curr) or str(curr).strip() == "":
+            issues.append(_issue(row, "confirmed_error", "currency is missing"))
+        elif str(curr).strip().upper() != "INR":
+            issues.append(_issue(row, "confirmed_error", f"unsupported currency {curr} (only INR is supported)"))
+    return issues
 
 
 # Check whether important timestamps are present and valid.
@@ -157,13 +180,26 @@ def validate_booking_window(frame: pd.DataFrame):
     return issues
 
 
-# Compare displayed fares with their component totals.
+# Compare displayed fares with their component totals and validate index readiness.
 def validate_prices(frame: pd.DataFrame, tolerance: float = 1.0):
     issues = []
     for _, row in frame.iterrows():
+        is_observed = row.get("scrape_status") == "observed"
         displayed = row.get("raw_price_displayed")
-        if row.get("scrape_status") == "observed" and pd.isna(displayed):
-            issues.append(_issue(row, "confirmed_error", "observed record has no displayed price"))
+        base = row.get("base_fare")
+
+        if is_observed:
+            if pd.isna(displayed):
+                issues.append(_issue(row, "confirmed_error", "observed record has no displayed price"))
+            elif displayed <= 0:
+                issues.append(_issue(row, "confirmed_error", "displayed price must be greater than zero"))
+
+            if pd.isna(base):
+                issues.append(_issue(row, "confirmed_error", "observed record has no base fare"))
+            elif base <= 0:
+                issues.append(_issue(row, "confirmed_error", "base fare must be greater than zero"))
+            elif pd.notna(displayed) and base > (displayed + tolerance):
+                issues.append(_issue(row, "confirmed_error", "base fare cannot exceed displayed price"))
 
         available = [value for component in PRICE_COMPONENTS if pd.notna(value := row.get(component))]
 
@@ -191,7 +227,7 @@ def detect_outliers(frame: pd.DataFrame):
             continue
 
         quartiles = group["raw_price_displayed"].quantile([0.25, 0.75])
-        q1, q3 = q1
+        q1, q3 = quartiles[0.25], quartiles[0.75]
         iqr = q3 - q1
         lower_bound = q1 - 1.5 * iqr
         upper_bound = q3 + 1.5 * iqr
@@ -241,7 +277,27 @@ def generate_quality_flags(issue_groups) -> pd.DataFrame:
     return flags.drop_duplicates() if not flags.empty else flags
 
 
-# Return only observations that are valid sellable fares.
-def build_cleaned_observations(frame: pd.DataFrame) -> pd.DataFrame:
-    """Return eligible observed fares."""
-    return frame[(frame["scrape_status"] == "observed") & frame["raw_price_displayed"].notna()].copy()
+# Return only observations that are valid sellable fares, excluding bad data, duplicates, and outliers.
+def build_cleaned_observations(
+    frame: pd.DataFrame,
+    quality_flags: pd.DataFrame | None = None,
+    excluded_flag_types: tuple[str, ...] | None = None,
+) -> pd.DataFrame:
+    """Return eligible observed fares, excluding confirmed errors, duplicates, and price outliers."""
+    eligible = frame[(frame["scrape_status"] == "observed") & frame["raw_price_displayed"].notna()].copy()
+    if "base_fare" in eligible.columns:
+        eligible = eligible[eligible["base_fare"].notna() & (eligible["base_fare"] > 0)]
+
+    if quality_flags is not None and not quality_flags.empty:
+        if excluded_flag_types is None:
+            excluded_flag_types = ("confirmed_error", "duplicate_suspected", "outlier_high", "outlier_low")
+        flagged_keys = quality_flags.loc[
+            quality_flags["flag_type"].isin(excluded_flag_types), "row_key"
+        ]
+        excluded_keys_str = {str(k) for k in flagged_keys}
+        if "observation_id" in eligible.columns:
+            eligible = eligible[~eligible["observation_id"].astype(str).isin(excluded_keys_str)]
+        else:
+            eligible = eligible[~eligible.index.astype(str).isin(excluded_keys_str)]
+
+    return eligible

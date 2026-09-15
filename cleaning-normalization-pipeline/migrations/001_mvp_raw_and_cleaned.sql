@@ -18,12 +18,12 @@ ALTER TABLE data_quality_flags DROP CONSTRAINT IF EXISTS data_quality_flags_has_
 ALTER TABLE data_quality_flags ADD CONSTRAINT data_quality_flags_has_subject CHECK (observation_id IS NOT NULL OR raw_id IS NOT NULL);
 
 CREATE TABLE IF NOT EXISTS cleaned_observations_table (
-    observation_id TEXT,
-    observation_date DATE,
-    route_id INTEGER,
-    airline_code TEXT,
-    cabin_class TEXT,
-    advance_booking_window TEXT,
-    clean_base_fare NUMERIC(10,2),
-    data_provenance TEXT
+    observation_id TEXT PRIMARY KEY,
+    observation_date DATE NOT NULL,
+    route_id INTEGER NOT NULL,
+    flight_number TEXT NOT NULL,
+    cabin_class TEXT NOT NULL,
+    advance_booking_window TEXT NOT NULL,
+    clean_base_fare NUMERIC(10,2) NOT NULL,
+    data_provenance TEXT NOT NULL
 );

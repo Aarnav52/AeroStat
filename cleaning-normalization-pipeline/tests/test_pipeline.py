@@ -66,7 +66,7 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(cleaned["observation_id"].tolist(), [1])
 
     def test_index_table_contains_only_observed_price_rows(self):
-        frame = pd.DataFrame([record(), record(observation_id=2, scrape_status="sold_out")])
+        frame = pd.DataFrame([record(), record(observation_id=2, flight_number="AI102", scrape_status="sold_out")])
         cleaned_observations, _ = clean_raw_observations(frame)
         table = prepare_cleaned_observations_table(cleaned_observations)
         self.assertEqual(table["observation_id"].tolist(), [1])
@@ -80,3 +80,48 @@ class PipelineTests(unittest.TestCase):
         cleaned_observations, quality_flags = clean_raw_observations(raw_observations)
         self.assertEqual(cleaned_observations["observation_id"].tolist(), [1])
         self.assertTrue(quality_flags.empty)
+
+    def test_non_inr_currency_flagged_and_excluded(self):
+        usd_record = record(observation_id=2, flight_number="AI102", currency="USD")
+        raw = pd.DataFrame([record(), usd_record])
+        cleaned, flags = clean_raw_observations(raw)
+        self.assertEqual(cleaned["observation_id"].tolist(), [1])
+        usd_flags = flags[flags["row_key"] == 2]
+        self.assertFalse(usd_flags.empty)
+        self.assertTrue(any("unsupported currency" in r for r in usd_flags["flag_reason"]))
+
+    def test_duplicates_and_outliers_excluded_from_cleaned_but_flagged(self):
+        # 4 distinct flights in the same group with 1 outlier fare, plus 1 duplicate of AI101
+        r1 = record(observation_id=1, raw_price_displayed="1000", base_fare="500", flight_number="AI101")
+        r2 = record(observation_id=2, raw_price_displayed="1050", base_fare="550", fuel_surcharge="100", flight_number="AI102")
+        r3 = record(observation_id=3, raw_price_displayed="980", base_fare="480", fuel_surcharge="100", flight_number="AI103")
+        r4 = record(observation_id=4, raw_price_displayed="10000", base_fare="9500", fuel_surcharge="100", flight_number="AI104") # outlier
+        r5 = record(observation_id=5, raw_price_displayed="1000", base_fare="500", flight_number="AI101") # duplicate of r1
+        raw = pd.DataFrame([r1, r2, r3, r4, r5])
+        cleaned, flags = clean_raw_observations(raw)
+        # Outlier (id 4) and duplicates (ids 1 & 5) must be excluded from cleaned observations
+        self.assertNotIn(4, cleaned["observation_id"].tolist())
+        self.assertNotIn(5, cleaned["observation_id"].tolist())
+        self.assertNotIn(1, cleaned["observation_id"].tolist())
+        self.assertIn(2, cleaned["observation_id"].tolist())
+        self.assertIn(3, cleaned["observation_id"].tolist())
+        # Both outlier and duplicates must be preserved in quality_flags
+        flag_types = flags["flag_type"].tolist()
+        self.assertIn("outlier_high", flag_types)
+        self.assertIn("duplicate_suspected", flag_types)
+
+    def test_invalid_base_fare_flagged_and_excluded(self):
+        invalid_fare = record(observation_id=2, flight_number="AI102", base_fare="-100")
+        raw = pd.DataFrame([record(), invalid_fare])
+        cleaned, flags = clean_raw_observations(raw)
+        self.assertEqual(cleaned["observation_id"].tolist(), [1])
+        fare_flags = flags[flags["row_key"] == 2]
+        self.assertTrue(any("base fare must be greater than zero" in r for r in fare_flags["flag_reason"]))
+
+    def test_missing_flight_number_flagged_and_excluded(self):
+        missing_fn = record(observation_id=2, flight_number="")
+        raw = pd.DataFrame([record(), missing_fn])
+        cleaned, flags = clean_raw_observations(raw)
+        self.assertEqual(cleaned["observation_id"].tolist(), [1])
+        fn_flags = flags[flags["row_key"] == 2]
+        self.assertTrue(any("flight_number is missing" in r for r in fn_flags["flag_reason"]))
