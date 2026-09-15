@@ -22,6 +22,8 @@ def main():
     if args.csv:
         summary = run_csv_pipeline(args.csv, db_engine)
         print({key: value for key, value in summary.items() if key != "profile"})
+        cleaning_summary = run_cleaning_pipeline(db_engine)
+        print({key: value for key, value in cleaning_summary.items() if key != "profile"})
     if args.run_cleaning:
         summary = run_cleaning_pipeline(db_engine)
         print({key: value for key, value in summary.items() if key != "profile"})

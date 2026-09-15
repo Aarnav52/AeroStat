@@ -146,4 +146,17 @@ def run_csv_pipeline(csv_path: Path, db_engine) -> dict:
         raw_ids = _insert_raw(connection, raw_frame, csv_path.name)
         observation_ids = _insert_structured(connection, enriched, raw_ids)
         flag_count = _insert_flags(connection, flags, raw_ids, observation_ids)
-    return {"profile": profile_data(raw_frame), "raw_rows": len(raw_frame), "structured_rows": len(observation_ids), "quality_flags": flag_count}
+
+    # Run cleaning only after ingestion commits so the runner can read the
+    # complete retained raw table and refresh the canonical cleaned table.
+    from .pipeline_runner import run_cleaning_pipeline
+
+    cleaning_result = run_cleaning_pipeline(db_engine)
+    return {
+        "profile": profile_data(raw_frame),
+        "raw_rows": len(raw_frame),
+        "structured_rows": len(observation_ids),
+        "quality_flags": flag_count,
+        "cleaned_rows": cleaning_result["cleaned_rows"],
+        "person_b_rows": cleaning_result["person_b_rows"],
+    }

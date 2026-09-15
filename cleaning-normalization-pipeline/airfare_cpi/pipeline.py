@@ -96,14 +96,14 @@ def normalize_categories(frame: pd.DataFrame) -> pd.DataFrame:
             result[column] = result[column].astype("string").str.strip().str.lower()
 
     if "airline_name" in result.columns:
-        result["airline_name"] = (
-            result["airline_name"]
-            .str.replace(r"\bair india\b", "Air India", regex=True)
-            .str.replace(r"\bakasa air\b", "Akasa Air", regex=True)
-            .str.replace(r"\bindigo\b", "IndiGo", regex=True)
-            .str.replace(r"\bspicejet\b", "SpiceJet", regex=True)
-            .str.replace(r"\bfly91\b", "Fly 91", regex=True)
-        )
+        from .cleaned_table import AIRLINE_CODE_MAP
+
+        canonical_by_key = {
+            "".join(name.casefold().split()): name
+            for name in AIRLINE_CODE_MAP
+        }
+        airline_keys = result["airline_name"].str.replace(r"\s+", "", regex=True)
+        result["airline_name"] = airline_keys.map(canonical_by_key).fillna(result["airline_name"])
 
     if "currency" in result.columns:
         result["currency"] = result["currency"].astype("string").str.strip().replace({"₹": "INR"}).str.upper()
@@ -283,14 +283,14 @@ def build_cleaned_observations(
     quality_flags: pd.DataFrame | None = None,
     excluded_flag_types: tuple[str, ...] | None = None,
 ) -> pd.DataFrame:
-    """Return eligible observed fares, excluding confirmed errors, duplicates, and price outliers."""
+    """Return eligible observed fares, excluding confirmed errors and duplicates."""
     eligible = frame[(frame["scrape_status"] == "observed") & frame["raw_price_displayed"].notna()].copy()
     if "base_fare" in eligible.columns:
         eligible = eligible[eligible["base_fare"].notna() & (eligible["base_fare"] > 0)]
 
     if quality_flags is not None and not quality_flags.empty:
         if excluded_flag_types is None:
-            excluded_flag_types = ("confirmed_error", "duplicate_suspected", "outlier_high", "outlier_low")
+            excluded_flag_types = ("confirmed_error", "duplicate_suspected")
         flagged_keys = quality_flags.loc[
             quality_flags["flag_type"].isin(excluded_flag_types), "row_key"
         ]
