@@ -4,7 +4,12 @@ Plain asserts, no framework, no real network - a FakeTransport stands in
 for HTTP. Run directly: python test_polite_fetcher.py
 """
 
-from app.scraper.polite_fetcher import PoliteFetcher, RobotsDisallowedError, FetchResult
+from app.scraper.polite_fetcher import (
+    PoliteFetcher,
+    RobotsDisallowedError,
+    BotChallengeDetectedError,
+    FetchResult,
+)
 
 
 class FakeTransport:
@@ -99,7 +104,27 @@ def test_missing_robots_txt_means_allowed():
     assert result.text == "ok"
 
 
-def test_robots_txt_access_denied_means_disallow_all():
+def test_robots_txt_401_means_disallow_all():
+    # 401 isn't one of the bot-challenge status codes (403/429/503) - it's
+    # a distinct "access denied" signal, handled as a robots.txt policy
+    # matter, not a bot-challenge.
+    transport = FakeTransport({
+        "https://example.com/robots.txt": FetchResult(
+            "https://example.com/robots.txt", 401, "",
+        ),
+    })
+    fetcher = PoliteFetcher(transport)
+    try:
+        fetcher.fetch("https://example.com/anything")
+        raise AssertionError("expected RobotsDisallowedError")
+    except RobotsDisallowedError:
+        pass
+
+
+def test_robots_txt_403_is_a_bot_challenge_not_a_policy_disallow():
+    # 403 IS one of the named bot-challenge status codes - getting blocked
+    # while fetching robots.txt itself is a different situation than the
+    # site's policy saying no, and must be distinguished.
     transport = FakeTransport({
         "https://example.com/robots.txt": FetchResult(
             "https://example.com/robots.txt", 403, "",
@@ -108,8 +133,45 @@ def test_robots_txt_access_denied_means_disallow_all():
     fetcher = PoliteFetcher(transport)
     try:
         fetcher.fetch("https://example.com/anything")
-        raise AssertionError("expected RobotsDisallowedError")
-    except RobotsDisallowedError:
+        raise AssertionError("expected BotChallengeDetectedError")
+    except BotChallengeDetectedError:
+        pass
+
+
+def test_bot_challenge_status_code_raises_and_is_not_retried():
+    transport = FakeTransport({
+        "https://example.com/robots.txt": FetchResult(
+            "https://example.com/robots.txt", 200, "User-agent: *\nAllow: /\n",
+        ),
+        "https://example.com/page": FetchResult(
+            "https://example.com/page", 429, "slow down",
+        ),
+    })
+    fetcher = PoliteFetcher(transport)
+    try:
+        fetcher.fetch("https://example.com/page")
+        raise AssertionError("expected BotChallengeDetectedError")
+    except BotChallengeDetectedError:
+        pass
+    page_fetches = [c for c in transport.calls if c == "https://example.com/page"]
+    assert len(page_fetches) == 1, "must not retry after a bot-challenge"
+
+
+def test_bot_challenge_text_marker_raises_even_on_200():
+    transport = FakeTransport({
+        "https://example.com/robots.txt": FetchResult(
+            "https://example.com/robots.txt", 200, "User-agent: *\nAllow: /\n",
+        ),
+        "https://example.com/page": FetchResult(
+            "https://example.com/page", 200,
+            "<html>Please complete the CAPTCHA to continue</html>",
+        ),
+    })
+    fetcher = PoliteFetcher(transport)
+    try:
+        fetcher.fetch("https://example.com/page")
+        raise AssertionError("expected BotChallengeDetectedError")
+    except BotChallengeDetectedError:
         pass
 
 

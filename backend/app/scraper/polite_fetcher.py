@@ -3,10 +3,10 @@ PoliteFetcher: the shared, compliance-first HTTP fetch layer every
 source-specific adapter must go through - no adapter gets its own direct
 requests (per CODING_AGENT_CONTEXT.md's spec).
 
-Built step by step. This file currently covers step 1 only: robots.txt
-enforcement, routed through the same request path as every other fetch.
-Bot-challenge detection, per-host rate limiting, and the circuit breaker
-land in later steps.
+Built step by step. This file currently covers steps 1-2: robots.txt
+enforcement and bot-challenge detection, both routed through the same
+request path. Per-host rate limiting and the circuit breaker land in
+later steps.
 """
 
 import urllib.robotparser
@@ -14,7 +14,34 @@ from urllib.parse import urlparse
 
 
 class RobotsDisallowedError(Exception):
-    """robots.txt disallows this URL. Never caught and retried - abort."""
+    """robots.txt policy disallows this URL. Never caught and retried - abort."""
+
+
+class BotChallengeDetectedError(Exception):
+    """Response looks like a bot-challenge or block. Never solved, never
+    retried, never evaded - abort immediately."""
+
+
+_BOT_CHALLENGE_STATUS_CODES = {403, 429, 503}
+
+_BOT_CHALLENGE_MARKERS = (
+    "captcha",
+    "unusual traffic",
+    "checking your browser",
+    "cloudflare",
+    "incapsula",
+    "are you a human",
+    "please verify you are a human",
+    "distil",
+    "perimeterx",
+)
+
+
+def _looks_like_bot_challenge(result):
+    if result.status_code in _BOT_CHALLENGE_STATUS_CODES:
+        return True
+    lowered = result.text.lower()
+    return any(marker in lowered for marker in _BOT_CHALLENGE_MARKERS)
 
 
 class FetchResult:
@@ -47,20 +74,32 @@ class PoliteFetcher:
     def _robots_url(self, host):
         return f"https://{host}/robots.txt"
 
+    def _do_request(self, url):
+        """The one place that actually calls the transport. Every fetch -
+        robots.txt included - goes through here, so bot-challenge detection
+        applies uniformly rather than only to "real" content fetches."""
+        result = self._transport.get(url)
+        if _looks_like_bot_challenge(result):
+            raise BotChallengeDetectedError(
+                f"bot-challenge detected fetching {url} (status={result.status_code})"
+            )
+        return result
+
     def _get_robots_parser(self, host):
         if host in self._robots_cache:
             return self._robots_cache[host]
 
-        result = self._transport.get(self._robots_url(host))
+        result = self._do_request(self._robots_url(host))
         parser = urllib.robotparser.RobotFileParser()
 
         if result.status_code == 200:
             # .parse() on text we fetched ourselves - never .read(), which
             # would fetch again on its own and skip our request path.
             parser.parse(result.text.splitlines())
-        elif result.status_code in (401, 403):
-            # Standard convention: access denied to robots.txt itself means
-            # treat the whole host as disallowed, not as wide open.
+        elif result.status_code == 401:
+            # Access denied to robots.txt itself (but not a bot-challenge
+            # status - those already raised above): treat as disallowed,
+            # not as wide open.
             parser.disallow_all = True
         else:
             # No robots.txt published (404 etc.) = no rules = allowed.
@@ -76,4 +115,4 @@ class PoliteFetcher:
         if not parser.can_fetch(user_agent, url):
             raise RobotsDisallowedError(f"robots.txt disallows fetching {url}")
 
-        return self._transport.get(url)
+        return self._do_request(url)
