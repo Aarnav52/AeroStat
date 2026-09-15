@@ -8,6 +8,7 @@ from app.scraper.polite_fetcher import (
     PoliteFetcher,
     RobotsDisallowedError,
     BotChallengeDetectedError,
+    CircuitOpenError,
     FetchResult,
 )
 
@@ -31,7 +32,13 @@ class FakeClock:
 class FakeTransport:
     """Canned responses keyed by exact URL. Records every call made, so
     tests can prove robots.txt goes through this same path, not some
-    separate hidden fetch."""
+    separate hidden fetch.
+
+    A value may be a single FetchResult/Exception (always returned/raised
+    the same way), or a list of them consumed in order - once only one
+    item remains, it keeps being returned/raised as the steady state, so
+    a test can queue e.g. [fail, fail, success] for circuit-breaker
+    scenarios without running out."""
 
     def __init__(self, responses):
         self.responses = responses
@@ -41,7 +48,14 @@ class FakeTransport:
         self.calls.append(url)
         if url not in self.responses:
             raise AssertionError(f"unexpected fetch: {url}")
-        return self.responses[url]
+        value = self.responses[url]
+        if isinstance(value, list):
+            item = value.pop(0) if len(value) > 1 else value[0]
+        else:
+            item = value
+        if isinstance(item, Exception):
+            raise item
+        return item
 
 
 def test_disallowed_path_raises():
@@ -376,6 +390,187 @@ def test_rate_limit_no_wait_if_enough_time_already_passed():
     assert len(clock.sleep_calls) == calls_before, (
         "no wait should be needed - 10s already passed"
     )
+
+
+def test_circuit_opens_after_threshold_consecutive_failures():
+    transport = FakeTransport({
+        "https://example.com/robots.txt": FetchResult(
+            "https://example.com/robots.txt", 200, "User-agent: *\nAllow: /\n",
+        ),
+        "https://example.com/page": FetchResult(
+            "https://example.com/page", 503, "unavailable",
+        ),
+    })
+    clock = FakeClock()
+    fetcher = PoliteFetcher(
+        transport, clock=clock, min_request_interval=0, failure_threshold=2,
+    )
+
+    for _ in range(2):
+        try:
+            fetcher.fetch("https://example.com/page")
+            raise AssertionError("expected BotChallengeDetectedError")
+        except BotChallengeDetectedError:
+            pass
+
+    calls_before = len(transport.calls)
+    try:
+        fetcher.fetch("https://example.com/page")
+        raise AssertionError("expected CircuitOpenError")
+    except CircuitOpenError:
+        pass
+    assert len(transport.calls) == calls_before, (
+        "circuit-open must not call the transport at all"
+    )
+
+
+def test_circuit_stays_open_during_cooldown():
+    transport = FakeTransport({
+        "https://example.com/robots.txt": FetchResult(
+            "https://example.com/robots.txt", 200, "User-agent: *\nAllow: /\n",
+        ),
+        "https://example.com/page": FetchResult(
+            "https://example.com/page", 503, "unavailable",
+        ),
+    })
+    clock = FakeClock()
+    fetcher = PoliteFetcher(
+        transport, clock=clock, min_request_interval=0,
+        failure_threshold=2, circuit_reset_timeout=30.0,
+    )
+    for _ in range(2):
+        try:
+            fetcher.fetch("https://example.com/page")
+        except BotChallengeDetectedError:
+            pass
+
+    clock.sleep(10.0)  # well short of the 30s cooldown
+    try:
+        fetcher.fetch("https://example.com/page")
+        raise AssertionError("expected CircuitOpenError")
+    except CircuitOpenError:
+        pass
+
+
+def test_circuit_half_open_trial_success_closes_it():
+    transport = FakeTransport({
+        "https://example.com/robots.txt": FetchResult(
+            "https://example.com/robots.txt", 200, "User-agent: *\nAllow: /\n",
+        ),
+        "https://example.com/page": [
+            FetchResult("https://example.com/page", 503, "unavailable"),
+            FetchResult("https://example.com/page", 503, "unavailable"),
+            FetchResult("https://example.com/page", 200, "recovered"),
+        ],
+    })
+    clock = FakeClock()
+    fetcher = PoliteFetcher(
+        transport, clock=clock, min_request_interval=0,
+        failure_threshold=2, circuit_reset_timeout=30.0,
+    )
+    for _ in range(2):
+        try:
+            fetcher.fetch("https://example.com/page")
+        except BotChallengeDetectedError:
+            pass
+
+    clock.sleep(31.0)  # cooldown elapsed - one trial request allowed
+    result = fetcher.fetch("https://example.com/page")
+    assert result.text == "recovered"
+
+    # Circuit is fully closed now (success reset the failure count to 0).
+    # Prove it takes a fresh full threshold of failures to reopen, not
+    # just one - each of the next two failures should still reach the
+    # transport (BotChallengeDetectedError, never CircuitOpenError), and
+    # only the third attempt after that gets blocked.
+    transport.responses["https://example.com/page"] = FetchResult(
+        "https://example.com/page", 503, "unavailable",
+    )
+    for i in range(2):
+        calls_before = len(transport.calls)
+        try:
+            fetcher.fetch("https://example.com/page")
+            raise AssertionError("expected BotChallengeDetectedError")
+        except CircuitOpenError:
+            raise AssertionError(
+                f"circuit reopened after only {i + 1} failure(s) post-reset "
+                f"- threshold is 2"
+            )
+        except BotChallengeDetectedError:
+            pass
+        assert len(transport.calls) == calls_before + 1
+
+    try:
+        fetcher.fetch("https://example.com/page")
+        raise AssertionError("expected CircuitOpenError")
+    except CircuitOpenError:
+        pass
+
+
+def test_circuit_half_open_trial_failure_reopens_and_extends_cooldown():
+    transport = FakeTransport({
+        "https://example.com/robots.txt": FetchResult(
+            "https://example.com/robots.txt", 200, "User-agent: *\nAllow: /\n",
+        ),
+        "https://example.com/page": FetchResult(
+            "https://example.com/page", 503, "unavailable",
+        ),
+    })
+    clock = FakeClock()
+    fetcher = PoliteFetcher(
+        transport, clock=clock, min_request_interval=0,
+        failure_threshold=2, circuit_reset_timeout=30.0,
+    )
+    for _ in range(2):
+        try:
+            fetcher.fetch("https://example.com/page")
+        except BotChallengeDetectedError:
+            pass
+
+    clock.sleep(31.0)  # cooldown elapsed - trial allowed, and it fails too
+    try:
+        fetcher.fetch("https://example.com/page")
+    except BotChallengeDetectedError:
+        pass
+
+    # Immediately after the failed trial, circuit must be open again,
+    # not reset to "give it another free trial" straight away.
+    try:
+        fetcher.fetch("https://example.com/page")
+        raise AssertionError("expected CircuitOpenError")
+    except CircuitOpenError:
+        pass
+
+
+def test_circuit_does_not_leak_across_hosts():
+    transport = FakeTransport({
+        "https://a.com/robots.txt": FetchResult(
+            "https://a.com/robots.txt", 200, "User-agent: *\nAllow: /\n",
+        ),
+        "https://a.com/page": FetchResult("https://a.com/page", 503, "down"),
+        "https://b.com/robots.txt": FetchResult(
+            "https://b.com/robots.txt", 200, "User-agent: *\nAllow: /\n",
+        ),
+        "https://b.com/page": FetchResult("https://b.com/page", 200, "fine"),
+    })
+    clock = FakeClock()
+    fetcher = PoliteFetcher(
+        transport, clock=clock, min_request_interval=0, failure_threshold=2,
+    )
+    for _ in range(2):
+        try:
+            fetcher.fetch("https://a.com/page")
+        except BotChallengeDetectedError:
+            pass
+    try:
+        fetcher.fetch("https://a.com/page")
+        raise AssertionError("expected CircuitOpenError for a.com")
+    except CircuitOpenError:
+        pass
+
+    # b.com must be entirely unaffected by a.com's open circuit.
+    result = fetcher.fetch("https://b.com/page")
+    assert result.text == "fine"
 
 
 def test_cannot_disable_robots_check():

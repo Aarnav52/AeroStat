@@ -3,10 +3,9 @@ PoliteFetcher: the shared, compliance-first HTTP fetch layer every
 source-specific adapter must go through - no adapter gets its own direct
 requests (per CODING_AGENT_CONTEXT.md's spec).
 
-Built step by step. This file currently covers steps 1-3: robots.txt
-enforcement, bot-challenge detection, and per-host rate limiting - all
-routed through the same request path. The circuit breaker lands in a
-later step.
+Built step by step. This file now covers all four required pieces:
+robots.txt enforcement, bot-challenge detection, per-host rate limiting,
+and the circuit breaker - all routed through the same request path.
 """
 
 import time
@@ -31,6 +30,13 @@ class RobotsDisallowedError(Exception):
 class BotChallengeDetectedError(Exception):
     """Response looks like a bot-challenge or block. Never solved, never
     retried, never evaded - abort immediately."""
+
+
+class CircuitOpenError(Exception):
+    """Too many consecutive failures on this host recently - refusing to
+    even attempt another request until the cooldown passes. This is what
+    "stops hammering it" means: no transport call happens at all while
+    the circuit is open, not even one that's expected to fail."""
 
 
 _BOT_CHALLENGE_STATUS_CODES = {403, 429, 503}
@@ -81,14 +87,27 @@ class PoliteFetcher:
     host must not throttle requests to a different, working one. It
     applies to every actual network call, robots.txt fetches included,
     since those go to the same host too.
+
+    The circuit breaker is also per host: after `failure_threshold`
+    consecutive failures (a transport exception, or a detected
+    bot-challenge) it opens for `circuit_reset_timeout` seconds, refusing
+    every request to that host with no transport call at all. After the
+    cooldown, exactly one trial request is allowed through; success
+    closes the circuit (failure count resets to zero), failure re-opens
+    it and restarts the cooldown.
     """
 
-    def __init__(self, transport, clock=None, min_request_interval=1.0):
+    def __init__(self, transport, clock=None, min_request_interval=1.0,
+                 failure_threshold=3, circuit_reset_timeout=30.0):
         self._transport = transport
         self._clock = clock or RealClock()
         self._min_request_interval = min_request_interval
+        self._failure_threshold = failure_threshold
+        self._circuit_reset_timeout = circuit_reset_timeout
         self._robots_cache = {}  # host -> urllib.robotparser.RobotFileParser
         self._last_request_time = {}  # host -> clock.now() at last request
+        self._consecutive_failures = {}  # host -> int
+        self._circuit_opened_at = {}  # host -> clock.now() when it opened
 
     def _robots_url(self, host):
         return f"https://{host}/robots.txt"
@@ -103,19 +122,51 @@ class PoliteFetcher:
                 now = self._clock.now()
         self._last_request_time[host] = now
 
+    def _check_circuit(self, host):
+        opened_at = self._circuit_opened_at.get(host)
+        if opened_at is None:
+            return  # circuit closed - nothing to check
+        if self._clock.now() - opened_at < self._circuit_reset_timeout:
+            raise CircuitOpenError(
+                f"circuit open for {host}: {self._consecutive_failures[host]} "
+                f"consecutive failures, cooldown not yet elapsed"
+            )
+        # Cooldown elapsed - allow exactly one trial request through
+        # (half-open). Failure count stays as-is until that trial
+        # actually succeeds or fails.
+
+    def _record_success(self, host):
+        self._consecutive_failures.pop(host, None)
+        self._circuit_opened_at.pop(host, None)
+
+    def _record_failure(self, host):
+        count = self._consecutive_failures.get(host, 0) + 1
+        self._consecutive_failures[host] = count
+        if count >= self._failure_threshold:
+            self._circuit_opened_at[host] = self._clock.now()
+
     def _do_request(self, url):
         """The one place that actually calls the transport. Every fetch -
-        robots.txt included - goes through here, so rate limiting and
-        bot-challenge detection apply uniformly rather than only to "real"
-        content fetches."""
+        robots.txt included - goes through here, so rate limiting,
+        bot-challenge detection, and the circuit breaker all apply
+        uniformly rather than only to "real" content fetches."""
         host = urlparse(url).netloc.lower()
-        self._enforce_rate_limit(host)
+        self._check_circuit(host)  # before rate limiting - no point
+        self._enforce_rate_limit(host)  # waiting to reject a request anyway
 
-        result = self._transport.get(url)
+        try:
+            result = self._transport.get(url)
+        except Exception:
+            self._record_failure(host)
+            raise
+
         if _looks_like_bot_challenge(result):
+            self._record_failure(host)
             raise BotChallengeDetectedError(
                 f"bot-challenge detected fetching {url} (status={result.status_code})"
             )
+
+        self._record_success(host)
         return result
 
     def _get_robots_parser(self, host):
