@@ -21,9 +21,10 @@ def get_flights(
     Fetch flights from the database with optional filtering.
     """
     query = """
-        SELECT f.observation_id, f.airline_name, f.flight_number, f.departure_date, 
+        SELECT f.observation_id, f.airline_name, f.flight_number, f.departure_date,
                f.departure_time, f.scrape_timestamp, f.raw_price_displayed, f.advance_booking_window,
-               r.origin_airport, r.destination_airport
+               r.origin_airport, r.destination_airport,
+               f.base_fare, f.taxes_fees, f.udf, f.gst_amount, f.fuel_surcharge
         FROM flight_observations f
         JOIN routes r ON f.route_id = r.route_id
         WHERE 1=1
@@ -61,7 +62,12 @@ def get_flights(
                         "price": float(row[6]) if row[6] else None,
                         "window": row[7],
                         "origin": row[8],
-                        "destination": row[9]
+                        "destination": row[9],
+                        "base_fare": float(row[10]) if row[10] is not None else None,
+                        "taxes_fees": float(row[11]) if row[11] is not None else None,
+                        "udf": float(row[12]) if row[12] is not None else None,
+                        "gst_amount": float(row[13]) if row[13] is not None else None,
+                        "fuel_surcharge": float(row[14]) if row[14] is not None else None,
                     })
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

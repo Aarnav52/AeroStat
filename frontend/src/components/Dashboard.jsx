@@ -6,11 +6,11 @@ import {
   BarChart3, Download, RefreshCw, ArrowUpRight, Search, 
   ShieldCheck, Layers, Info, Check, Zap, Plane, Activity, Compass, Database
 } from 'lucide-react';
-import { 
-  generateTimeSeriesData, TOP_ROUTES_DATA, AIRLINE_BREAKDOWN, 
-  BOOKING_WINDOWS, LIVE_MONITORED_CORRIDORS, GOVERNANCE_STATS, SIMULATION_PRESETS
+import {
+  generateTimeSeriesData, TOP_ROUTES_DATA, AIRLINE_BREAKDOWN,
+  BOOKING_WINDOWS, GOVERNANCE_STATS, SIMULATION_PRESETS
 } from '../data/mockData';
-import { fetchIndex } from '../api/apiService';
+import { fetchIndex, fetchFlights } from '../api/apiService';
 import AirlineAnalytics from './AirlineAnalytics';
 import LiveDataPanel from './LiveDataPanel';
 
@@ -65,6 +65,76 @@ export default function Dashboard() {
 
     loadIndexData();
   }, [selectedRoute, selectedWindow]);
+
+  // ---------------------------------------------------------
+  // LIVE MONITORED CORRIDORS — real recent scrapes, fee-decomposed
+  // ---------------------------------------------------------
+  const [liveFlights, setLiveFlights] = useState([]);
+
+  useEffect(() => {
+    fetchFlights('', '')
+      .then((data) => setLiveFlights(data || []))
+      .catch((error) => console.error('Failed to load live flights:', error));
+  }, []);
+
+  const liveCorridors = useMemo(() => {
+    // Real, fee-decomposed rows only — never show a null/undefined ₹ figure.
+    const decomposed = liveFlights.filter(
+      (f) => f.base_fare != null && f.price != null
+    );
+
+    // Compare each (route, flight_number) against its own earliest-seen price
+    // in the currently-loaded data. This is genuinely real, just not a full
+    // 30-day trend yet — the scraper hasn't been running that long.
+    const firstSeenPrice = {};
+    for (const f of decomposed) {
+      const key = `${f.origin}-${f.destination}|${f.flight_number}|${f.window}`;
+      if (!(key in firstSeenPrice) || f.scrape_timestamp < firstSeenPrice[key].ts) {
+        firstSeenPrice[key] = { price: f.price, ts: f.scrape_timestamp };
+      }
+    }
+
+    // Most recent observation per (route, flight_number, window)
+    const latestByKey = {};
+    for (const f of decomposed) {
+      const key = `${f.origin}-${f.destination}|${f.flight_number}|${f.window}`;
+      if (!latestByKey[key] || f.scrape_timestamp > latestByKey[key].scrape_timestamp) {
+        latestByKey[key] = f;
+      }
+    }
+
+    return Object.entries(latestByKey)
+      .sort((a, b) => (a[1].scrape_timestamp < b[1].scrape_timestamp ? 1 : -1))
+      .slice(0, 15)
+      .map(([key, f], idx) => {
+        const base = firstSeenPrice[key]?.price ?? f.price;
+        const pctChange = base > 0 ? ((f.price - base) / base) * 100 : 0;
+        const taxes = Math.round(
+          (f.taxes_fees ?? 0) + (f.udf ?? 0) + (f.gst_amount ?? 0) + (f.fuel_surcharge ?? 0)
+        );
+
+        let status = 'NORMAL';
+        let statusStyle = 'bg-sky-500/10 text-sky-400 border-sky-500/30';
+        if (pctChange > 10) {
+          status = 'SURGE'; statusStyle = 'bg-rose-500/10 text-rose-400 border-rose-500/30';
+        } else if (pctChange < -10) {
+          status = 'DISCOUNT'; statusStyle = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+        }
+
+        return {
+          id: idx,
+          route: `${f.origin} → ${f.destination}`,
+          carrier: `${f.airline_name} ${f.flight_number}`,
+          horizon: f.window,
+          baseFare: Math.round(f.base_fare),
+          taxes,
+          totalFare: Math.round(f.price),
+          vs30d: `${pctChange >= 0 ? '+' : ''}${pctChange.toFixed(1)}%`,
+          status,
+          statusStyle,
+        };
+      });
+  }, [liveFlights]);
 
   // ---------------------------------------------------------
   // ACTIVE PRESET SHOCK FACTOR
@@ -124,7 +194,7 @@ export default function Dashboard() {
   // FILTERED LIVE MONITORED CORRIDORS TABLE
   // ---------------------------------------------------------
   const filteredCorridors = useMemo(() => {
-    return LIVE_MONITORED_CORRIDORS.filter(c => {
+    return liveCorridors.filter(c => {
       const matchRoute =
         selectedRoute === 'ALL' || c.route.includes(selectedRoute);
 
@@ -139,7 +209,7 @@ export default function Dashboard() {
 
       return matchRoute && matchAirline && matchSearch;
     });
-  }, [selectedRoute, selectedAirline, searchTerm]);
+  }, [liveCorridors, selectedRoute, selectedAirline, searchTerm]);
 
   // ---------------------------------------------------------
   // CSV EXPORT
@@ -331,7 +401,9 @@ export default function Dashboard() {
             </div>
 
             <span className="text-[11px] text-slate-400 mt-2 block font-mono">
-              Base Q1 2024 = 100 • 7D Low: 166.20
+              {realIndexData.length > 0
+                ? `Base ${realIndexData[0]?.date} = 100 • Low: ${summaryStats.troughValue}`
+                : 'Awaiting live index data'}
             </span>
 
           </div>
@@ -356,40 +428,45 @@ export default function Dashboard() {
 
               </span>
 
-              <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
-                +₹210 (WoW)
-              </span>
+              {chartData.length >= 2 && chartData[chartData.length - 1]?.avgFare != null && chartData[chartData.length - 2]?.avgFare != null && (
+                <span className={`inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-full font-mono border ${
+                  chartData[chartData.length - 1].avgFare >= chartData[chartData.length - 2].avgFare
+                    ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                    : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                }`}>
+                  {chartData[chartData.length - 1].avgFare >= chartData[chartData.length - 2].avgFare ? '+' : ''}
+                  ₹{Math.round(chartData[chartData.length - 1].avgFare - chartData[chartData.length - 2].avgFare)} (DoD)
+                </span>
+              )}
 
             </div>
 
             <span className="text-[11px] text-slate-400 mt-2 block font-mono">
-              Yield: ₹4.82 / pax-km • Clean Base
+              {realIndexData.length > 0
+                ? `${realIndexData[realIndexData.length - 1]?.num_observations_used ?? 0} live observations`
+                : 'Live — Clean Base'}
             </span>
 
           </div>
 
 
-          {/* T+1 Surge */}
+          {/* Index Volatility */}
           <div className="glass-panel p-5 rounded-2xl glass-card-glow">
 
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-              T+1 Urgent Surge Factor
+              Index Volatility (Std Dev)
             </span>
 
             <div className="flex items-baseline justify-between mt-2">
 
               <span className="text-3xl font-extrabold text-amber-400 font-mono">
-                1.44x
-              </span>
-
-              <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono">
-                High Pressure
+                {summaryStats.volatility}
               </span>
 
             </div>
 
             <span className="text-[11px] text-slate-400 mt-2 block">
-              vs 30-Day Benchmark • Spread: +₹2,430
+              Peak {summaryStats.peakValue} ({summaryStats.peakLabel}) • Trough {summaryStats.troughValue} ({summaryStats.troughLabel})
             </span>
 
           </div>
@@ -934,7 +1011,7 @@ export default function Dashboard() {
                       </th>
 
                       <th className="p-3.5">
-                        vs 30D Index
+                        vs First Seen
                       </th>
 
                       <th className="p-3.5 rounded-r-lg">
