@@ -7,8 +7,7 @@ import {
   ShieldCheck, Layers, Info, Check, Zap, Plane, Activity, Compass, Database
 } from 'lucide-react';
 import {
-  generateTimeSeriesData, TOP_ROUTES_DATA, AIRLINE_BREAKDOWN,
-  BOOKING_WINDOWS, GOVERNANCE_STATS, SIMULATION_PRESETS
+  generateTimeSeriesData, SIMULATION_PRESETS
 } from '../data/mockData';
 import { fetchIndex, fetchFlights } from '../api/apiService';
 import AirlineAnalytics from './AirlineAnalytics';
@@ -134,6 +133,12 @@ export default function Dashboard() {
           statusStyle,
         };
       });
+  }, [liveFlights]);
+
+  // Real distinct route count from live data (replaces a hardcoded "456").
+  const realRouteCount = useMemo(() => {
+    const routes = new Set(liveFlights.map((f) => `${f.origin}-${f.destination}`));
+    return routes.size;
   }, [liveFlights]);
 
   // ---------------------------------------------------------
@@ -278,7 +283,7 @@ export default function Dashboard() {
                 SYSTEM ONLINE
               </span>
 
-              {((dashboardTab === 'macro' && realIndexData.length === 0) || dashboardTab === 'telemetry') && (
+              {dashboardTab === 'macro' && realIndexData.length === 0 && (
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30">
                   Simulated Data
                 </span>
@@ -834,11 +839,11 @@ export default function Dashboard() {
                   <div className="flex justify-between py-1.5 border-b border-slate-800">
 
                     <span className="text-slate-400">
-                      Axiomatic Transitivity Score:
+                      Multilateral (GEKS) Transitivity:
                     </span>
 
-                    <span className="font-mono font-bold text-emerald-400">
-                      {GOVERNANCE_STATS.transitivityScore}
+                    <span className="font-mono font-bold text-amber-400">
+                      Not Yet Computed
                     </span>
 
                   </div>
@@ -851,7 +856,7 @@ export default function Dashboard() {
                     </span>
 
                     <span className="font-mono font-bold text-slate-200">
-                      {GOVERNANCE_STATS.missingQuoteImputation}
+                      None (real quotes only)
                     </span>
 
                   </div>
@@ -864,7 +869,7 @@ export default function Dashboard() {
                     </span>
 
                     <span className="font-mono font-bold text-sky-400">
-                      {GOVERNANCE_STATS.routeBreadth}
+                      7 of 8 Routes (87.5%)
                     </span>
 
                   </div>
@@ -881,13 +886,17 @@ export default function Dashboard() {
 
                   <Layers className="w-4 h-4 text-sky-400" />
 
-                  Booking Window Multipliers
+                  Booking Window Weights (Jevons Engine)
 
                 </h4>
 
                 <div className="grid grid-cols-3 gap-2 text-center text-xs">
 
-                  {BOOKING_WINDOWS.slice(0, 3).map((win) => (
+                  {[
+                    { bucket: 'T+1', weight: '0.12' },
+                    { bucket: 'T+7', weight: '0.28' },
+                    { bucket: 'T+30', weight: '0.20' },
+                  ].map((win) => (
 
                     <div
                       key={win.bucket}
@@ -895,11 +904,11 @@ export default function Dashboard() {
                     >
 
                       <span className="text-[10px] text-slate-400 block">
-                        {win.bucket.split(' ')[0]}
+                        {win.bucket}
                       </span>
 
                       <span className="font-mono font-bold text-sky-400 text-sm">
-                        {win.multiplier}
+                        {win.weight}
                       </span>
 
                     </div>
@@ -907,6 +916,10 @@ export default function Dashboard() {
                   ))}
 
                 </div>
+
+                <p className="text-[10px] text-slate-500">
+                  Estimated weights used by jevons_engine_cloud.py (no proprietary booking data exists) — not fitted to real purchase data.
+                </p>
 
               </div>
 
@@ -925,11 +938,11 @@ export default function Dashboard() {
                 <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 text-xs space-y-1">
 
                   <span className="font-mono font-bold text-sky-400 block">
-                    456 Active Route Pairs
+                    {realRouteCount || '—'} Active Route Pairs
                   </span>
 
                   <p className="text-slate-400 text-[11px]">
-                    Continuous tracking across Delhi (DEL), Mumbai (BOM), Bengaluru (BLR), and Kolkata (CCU) corridors.
+                    Live scraper coverage — SerpApi plus direct Akasa Air / SpiceJet collection.
                   </p>
 
                 </div>
@@ -950,7 +963,7 @@ export default function Dashboard() {
 
                     <Activity className="w-4 h-4 text-sky-400" />
 
-                    Live Monitored Domestic Corridors (456 Tracked)
+                    Live Monitored Domestic Corridors ({liveCorridors.length} Tracked)
 
                   </h4>
 
