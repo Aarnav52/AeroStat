@@ -10,6 +10,8 @@ import {
   fetchRoutes, fetchFlights, triggerScrape, fetchIndex, fetchHealth,
 } from '../api/apiService';
 
+const DATA_REFRESH_MS = 3 * 60 * 1000;
+
 // ─── Small helpers ─────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }) {
@@ -86,10 +88,15 @@ export default function LiveDataPanel() {
       .finally(() => setLoadingIndex(false));
   }, [selectedRoute, selectedWindow]);
 
-  // Reload when selections change
+  // Reload when selections change, and poll for newly-scraped data
   useEffect(() => {
     loadFlights();
     loadIndex();
+    const intervalId = setInterval(() => {
+      loadFlights();
+      loadIndex();
+    }, DATA_REFRESH_MS);
+    return () => clearInterval(intervalId);
   }, [selectedRoute, selectedWindow]);
 
   // ── Scrape trigger ───────────────────────────────────────────────────────────

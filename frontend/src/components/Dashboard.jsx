@@ -13,6 +13,11 @@ import { fetchIndex, fetchFlights } from '../api/apiService';
 import AirlineAnalytics from './AirlineAnalytics';
 import LiveDataPanel from './LiveDataPanel';
 
+// Scrapes land every ~6h (T+1) / daily (T+30) via the scheduled sweeps;
+// poll every 3 minutes so newly-inserted rows show up without a manual
+// reload, without hammering the API.
+const DATA_REFRESH_MS = 3 * 60 * 1000;
+
 export default function Dashboard() {
   const [dashboardTab, setDashboardTab] = useState('macro'); // 'macro', 'airlines', 'telemetry'
 
@@ -63,6 +68,8 @@ export default function Dashboard() {
     };
 
     loadIndexData();
+    const intervalId = setInterval(loadIndexData, DATA_REFRESH_MS);
+    return () => clearInterval(intervalId);
   }, [selectedRoute, selectedWindow]);
 
   // ---------------------------------------------------------
@@ -71,9 +78,14 @@ export default function Dashboard() {
   const [liveFlights, setLiveFlights] = useState([]);
 
   useEffect(() => {
-    fetchFlights('', '')
-      .then((data) => setLiveFlights(data || []))
-      .catch((error) => console.error('Failed to load live flights:', error));
+    const loadLiveFlights = () => {
+      fetchFlights('', '')
+        .then((data) => setLiveFlights(data || []))
+        .catch((error) => console.error('Failed to load live flights:', error));
+    };
+    loadLiveFlights();
+    const intervalId = setInterval(loadLiveFlights, DATA_REFRESH_MS);
+    return () => clearInterval(intervalId);
   }, []);
 
   const liveCorridors = useMemo(() => {

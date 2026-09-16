@@ -12,6 +12,8 @@ import {
 import { Plane, BarChart2, Layers, ShieldCheck } from 'lucide-react';
 import { fetchFlights } from '../api/apiService';
 
+const DATA_REFRESH_MS = 3 * 60 * 1000;
+
 export default function AirlineAnalytics() {
   const [timeRange, setTimeRange] = useState('90D');
   const [selectedWindow, setSelectedWindow] = useState('T+1');
@@ -28,37 +30,29 @@ export default function AirlineAnalytics() {
    * =====================================================
    */
   useEffect(() => {
-    setLoading(true);
+    const loadAirlineData = () => {
+      setLoading(true);
 
-    console.log(
-      `Fetching airline data for ${selectedWindow}`
-    );
+      fetchFlights('', selectedWindow)
+        .then((data) => {
+          setFlights(data);
+        })
+        .catch((error) => {
+          console.error(
+            'Failed to fetch airline data:',
+            error
+          );
 
-    fetchFlights('', selectedWindow)
-      .then((data) => {
-        console.log(
-          `Flights received for ${selectedWindow}:`,
-          data.length
-        );
+          setFlights([]);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    };
 
-        console.log(
-          `Sample ${selectedWindow} data:`,
-          data.slice(0, 3)
-        );
-
-        setFlights(data);
-      })
-      .catch((error) => {
-        console.error(
-          'Failed to fetch airline data:',
-          error
-        );
-
-        setFlights([]);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    loadAirlineData();
+    const intervalId = setInterval(loadAirlineData, DATA_REFRESH_MS);
+    return () => clearInterval(intervalId);
   }, [selectedWindow]);
 
   const [showIndigo, setShowIndigo] = useState(true);
