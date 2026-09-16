@@ -144,7 +144,7 @@ def insert_observations(conn, observations: list, route_id: int, source_id: int)
         )
     observations = deduped
     if not observations:
-        return 0, skipped_same_day
+        return 0, skipped_recent
 
     _apply_fee_decomposition(conn, observations, route_id)
 
@@ -198,8 +198,8 @@ def insert_observations(conn, observations: list, route_id: int, source_id: int)
         inserted_count = len(inserted_rows) if inserted_rows else 0
         conn.commit()
         
-    logger.info(f"Successfully inserted {inserted_count} new observations out of {len(observations)} total (skipped {skipped_same_day} duplicate/already scraped).")
-    return inserted_count, skipped_same_day
+    logger.info(f"Successfully inserted {inserted_count} new observations out of {len(observations)} total (skipped {skipped_recent} duplicate/already scraped).")
+    return inserted_count, skipped_recent
 
 if __name__ == "__main__":
     from app.db.connection import get_db_connection
