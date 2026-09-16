@@ -1,4 +1,4 @@
-// APEX-IND Simulated Real-Time Data Engine for Airfare Price Index & Analytics
+// AeroStat Simulated Real-Time Data Engine for Airfare Price Index & Analytics
 
 // Real, verifiable operational counts (live DB, apix(SIH)) — not derived
 // index statistics, since GEKS-Jevons aggregation isn't wired to the live

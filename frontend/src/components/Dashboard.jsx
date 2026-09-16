@@ -263,7 +263,7 @@ export default function Dashboard() {
     link.setAttribute("href", encodedUri);
     link.setAttribute(
       "download",
-      `APEX_IND_Airfare_Index_${timeRange}_${activePreset}.csv`
+      `AeroStat_Airfare_Index_${timeRange}_${activePreset}.csv`
     );
 
     document.body.appendChild(link);
@@ -289,7 +289,7 @@ export default function Dashboard() {
             <div className="flex items-center space-x-3">
 
               <h2 className="text-2xl sm:text-3xl font-extrabold text-white font-sans tracking-tight">
-                APEX-IND Real-Time Intelligence Dashboard
+                AeroStat Real-Time Intelligence Dashboard
               </h2>
 
               <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono">
@@ -638,7 +638,7 @@ export default function Dashboard() {
 
                     <span className="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
 
-                    <span>APEX-IND GEKS</span>
+                    <span>AeroStat GEKS</span>
 
                   </button>
 
@@ -745,7 +745,7 @@ export default function Dashboard() {
                       <Area
                         type="monotone"
                         dataKey="geksIndex"
-                        name="APEX-IND GEKS (Drift-Free)"
+                        name="AeroStat GEKS (Drift-Free)"
                         stroke="#38bdf8"
                         strokeWidth={3}
                         fillOpacity={1}

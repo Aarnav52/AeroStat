@@ -99,7 +99,7 @@ export default function PipelineSection() {
             </h2>
 
             <p className="text-slate-600 text-base leading-relaxed">
-              APEX-IND collects airfare observations for selected Indian
+              AeroStat collects airfare observations for selected Indian
               domestic routes using Google Flights data accessed through
               the SerpApi API. Each observation records the flight,
               route, fare, departure date, booking window and scrape time.
@@ -675,7 +675,7 @@ export default function PipelineSection() {
             </h2>
 
             <p className="text-slate-600 text-base leading-relaxed">
-              The planned APEX-IND methodology uses a multilateral GEKS
+              The planned AeroStat methodology uses a multilateral GEKS
               framework to reduce chain drift and improve transitivity
               when comparing prices across multiple periods.
             </p>
@@ -713,7 +713,7 @@ export default function PipelineSection() {
             </h2>
 
             <p className="text-slate-600 text-base leading-relaxed">
-              APEX-IND is intended to provide a higher-frequency airfare
+              AeroStat is intended to provide a higher-frequency airfare
               signal that can eventually be compared with official
               MoSPI CPI transport statistics.
             </p>
@@ -757,7 +757,7 @@ export default function PipelineSection() {
                     <div>
 
                       <span className="text-xs font-bold text-slate-900 block">
-                        APEX-IND Airfare Observations
+                        AeroStat Airfare Observations
                       </span>
 
                       <span className="text-[11px] text-slate-500">

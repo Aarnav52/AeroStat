@@ -16,7 +16,7 @@ export default function Header({ activeView, setActiveView, onOpenWhitepaper }) 
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <span className="text-xl font-extrabold tracking-tight text-white font-sans">APEX-IND</span>
+              <span className="text-xl font-extrabold tracking-tight text-white font-sans">AeroStat</span>
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/30 font-mono">
                 <span className="w-1.5 h-1.5 rounded-full bg-sky-400 mr-1.5 animate-pulse"></span>
                 LIVE BENCHMARK

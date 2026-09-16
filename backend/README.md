@@ -150,7 +150,7 @@ NOT compute a geometric mean of price relatives — it computes
 `(AVG(price today) / AVG(price on base date)) × 100`, a simple ratio of
 arithmetic means. (It even defines an unused `_geometric_mean()` helper
 that nothing calls — dead code, not wired in.) This is what `GET /index/`
-currently returns, and what the dashboard's "APEX-IND GEKS" panel displays.
+currently returns, and what the dashboard's "AeroStat GEKS" panel displays.
 
 The real, correctly-implemented engine is `jevons_engine/
 jevons_engine_cloud.py` (repo root, not under `backend/`) — it genuinely

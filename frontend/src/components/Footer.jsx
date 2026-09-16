@@ -14,7 +14,7 @@ export default function Footer({ onOpenWhitepaper }) {
               <div className="w-8 h-8 rounded-lg bg-sky-500 flex items-center justify-center text-white font-bold">
                 <Plane className="w-4 h-4" />
               </div>
-              <span className="text-lg font-extrabold text-white tracking-tight font-sans">APEX-IND</span>
+              <span className="text-lg font-extrabold text-white tracking-tight font-sans">AeroStat</span>
             </div>
             <p className="text-slate-400 text-xs leading-relaxed">
               India's real-time airfare price index benchmark, built on Jevons price-relative
@@ -66,7 +66,7 @@ export default function Footer({ onOpenWhitepaper }) {
 
         {/* Bottom Strip */}
         <div className="pt-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-500">
-          <p>© 2026 APEX-IND Airfare Intelligence Platform. Built for India Macro & Aviation Analytics.</p>
+          <p>© 2026 AeroStat Airfare Intelligence Platform. Built for India Macro & Aviation Analytics.</p>
           <div className="flex items-center space-x-6">
             <a href="#" className="hover:text-slate-300">Privacy Policy</a>
             <a href="#" className="hover:text-slate-300">API Terms</a>

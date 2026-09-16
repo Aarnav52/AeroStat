@@ -16,7 +16,7 @@ export default function WhitepaperModal({ isOpen, onClose }) {
               <FileText className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-extrabold text-white">APEX-IND Technical Methodology Paper</h3>
+              <h3 className="text-lg font-extrabold text-white">AeroStat Technical Methodology Paper</h3>
               <p className="text-xs text-slate-400">Elementary Jevons — live • MoSPI Calibration & GEKS Transitivity — roadmap</p>
             </div>
           </div>
@@ -36,7 +36,7 @@ export default function WhitepaperModal({ isOpen, onClose }) {
           <div className="p-5 rounded-2xl bg-sky-950/40 border border-sky-500/30 space-y-2">
             <h4 className="text-xs font-bold text-sky-400 uppercase tracking-wider">Abstract & Scope</h4>
             <p className="text-xs text-slate-300">
-              APEX-IND targets the persistent issue of chain drift in high-frequency airfare indexing
+              AeroStat targets the persistent issue of chain drift in high-frequency airfare indexing
               across Indian domestic aviation routes. The elementary layer — Jevons price relatives,
               geometric-mean aggregated — is built and running on real, live-scraped data today.
               Multilateral GEKS-Jevons aggregation (Gini-Eltetö-Köves-Szulc) across a rolling window,
@@ -53,7 +53,7 @@ export default function WhitepaperModal({ isOpen, onClose }) {
             </h4>
             <p className="text-slate-300">
               Airfare pricing engines generate significant pricing noise due to unbundled ancillaries
-              (seat assignment, meals, priority check-in) and convenience fee surges. APEX-IND deploys
+              (seat assignment, meals, priority check-in) and convenience fee surges. AeroStat deploys
               automated, compliance-gated scrapers (SerpApi plus direct Akasa Air and SpiceJet collection,
               every 6 hours for T+1 fares and daily for T+30) across 7 domestic routes today, with 2,500+
               real fare points collected so far — the remaining T+7/T+15/T+45 booking windows and
@@ -106,7 +106,7 @@ export default function WhitepaperModal({ isOpen, onClose }) {
 
         {/* Modal Footer */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-slate-800 bg-slate-950/60">
-          <span className="text-xs text-slate-400">© 2026 APEX-IND Intelligence Project</span>
+          <span className="text-xs text-slate-400">© 2026 AeroStat Intelligence Project</span>
           <button
             onClick={onClose}
             className="px-5 py-2 text-xs font-bold rounded-xl text-white bg-sky-600 hover:bg-sky-500 transition-colors"
