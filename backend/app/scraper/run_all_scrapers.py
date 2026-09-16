@@ -150,6 +150,20 @@ def run_full_sweep(route_limit=None, windows=None):
                     logger.error(f"SpiceJet failed for {origin}-{dest} {window}: {e}")
                     summary["errors"].append(f"spicejet/{origin}-{dest}/{window}: {e}")
 
+    total_inserted = summary["serpapi"] + summary["akasa"] + summary["spicejet"]
+    if total_inserted > 0:
+        try:
+            from app.services.pipeline_service import pipeline_service
+            logger.info("Sweep inserted new rows - running cleaning + Jevons index pipeline so today's index_values point exists...")
+            pipeline_result = pipeline_service.run_full_pipeline()
+            summary["pipeline"] = pipeline_result
+            logger.info(f"Pipeline run: {pipeline_result}")
+        except Exception as e:
+            logger.error(f"Post-sweep pipeline run failed (index_values not updated this cycle): {e}")
+            summary["errors"].append(f"pipeline: {e}")
+    else:
+        logger.info("No new rows inserted this sweep - skipping pipeline run.")
+
     return summary
 
 
