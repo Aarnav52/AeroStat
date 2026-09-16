@@ -208,7 +208,7 @@ export default function Dashboard() {
                 SYSTEM ONLINE
               </span>
 
-              {dashboardTab !== 'live' && (
+              {((dashboardTab === 'macro' && realIndexData.length === 0) || dashboardTab === 'telemetry') && (
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30">
                   Simulated Data
                 </span>
