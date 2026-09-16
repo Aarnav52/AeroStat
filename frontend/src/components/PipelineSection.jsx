@@ -110,7 +110,7 @@ export default function PipelineSection() {
               <li className="flex items-start space-x-2.5">
                 <CheckCircle2 className="w-5 h-5 text-sky-600 shrink-0 mt-0.5" />
                 <span>
-                  Current MVP monitors 6 domestic airport corridors.
+                  Current MVP monitors 7 domestic airport corridors.
                 </span>
               </li>
 
