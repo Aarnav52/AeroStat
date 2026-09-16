@@ -141,6 +141,20 @@ export default function Dashboard() {
     return routes.size;
   }, [liveFlights]);
 
+  // Real pipeline health — fee-decomposition completeness and scrape
+  // recency, computed from the same live data already loaded above.
+  const pipelineHealth = useMemo(() => {
+    if (liveFlights.length === 0) return null;
+    const decomposedCount = liveFlights.filter((f) => f.base_fare != null).length;
+    const purity = (decomposedCount / liveFlights.length) * 100;
+    const mostRecentTs = liveFlights.reduce(
+      (max, f) => (f.scrape_timestamp > max ? f.scrape_timestamp : max),
+      liveFlights[0].scrape_timestamp
+    );
+    const minutesAgo = Math.max(0, Math.round((Date.now() - new Date(mostRecentTs).getTime()) / 60000));
+    return { purity, count: liveFlights.length, minutesAgo };
+  }, [liveFlights]);
+
   // ---------------------------------------------------------
   // ACTIVE PRESET SHOCK FACTOR
   // ---------------------------------------------------------
@@ -398,10 +412,18 @@ export default function Dashboard() {
 
               </span>
 
-              <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
-                <ArrowUpRight className="w-3 h-3 mr-0.5" />
-                +1.84% (DoD)
-              </span>
+              {chartData.length >= 2 && chartData[chartData.length - 1]?.geksIndex != null && chartData[chartData.length - 2]?.geksIndex != null && (
+                <span className={`inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-full font-mono border ${
+                  chartData[chartData.length - 1].geksIndex >= chartData[chartData.length - 2].geksIndex
+                    ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                    : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                }`}>
+                  {chartData[chartData.length - 1].geksIndex >= chartData[chartData.length - 2].geksIndex
+                    ? <ArrowUpRight className="w-3 h-3 mr-0.5" /> : null}
+                  {((chartData[chartData.length - 1].geksIndex - chartData[chartData.length - 2].geksIndex) / chartData[chartData.length - 2].geksIndex * 100 >= 0 ? '+' : '')}
+                  {((chartData[chartData.length - 1].geksIndex - chartData[chartData.length - 2].geksIndex) / chartData[chartData.length - 2].geksIndex * 100).toFixed(2)}% (DoD)
+                </span>
+              )}
 
             </div>
 
@@ -487,17 +509,19 @@ export default function Dashboard() {
             <div className="flex items-baseline justify-between mt-2">
 
               <span className="text-3xl font-extrabold text-emerald-400 font-mono">
-                99.82%
+                {pipelineHealth ? `${pipelineHealth.purity.toFixed(1)}%` : '—'}
               </span>
 
               <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
-                Purity
+                Fee-Decomposed
               </span>
 
             </div>
 
             <span className="text-[11px] text-slate-400 mt-2 block">
-              4.23M Quotes Cleaned • Latency: 38ms
+              {pipelineHealth
+                ? `${pipelineHealth.count.toLocaleString('en-IN')} Quotes Loaded • Last Scrape: ${pipelineHealth.minutesAgo}m ago`
+                : 'Awaiting live data'}
             </span>
 
           </div>
