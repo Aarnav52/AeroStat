@@ -111,12 +111,10 @@ def insert_observations(conn, observations: list, route_id: int, source_id: int)
     Skips duplicates based on unique constraint.
 
     The DB's unique constraint includes scrape_timestamp, which is set to
-    "now" per scrape call - so it can never catch two separate runs, even
-    minutes apart, that produce identical data (e.g. the same sweep re-run
-    by hand or by an overlapping scheduler). Guard against that here: skip
-    any observation whose (flight_number, departure_date,
-    advance_booking_window) was already scraped for this route/source
-    earlier the same IST calendar day.
+    "now" per scrape call. Skip any observation whose exact flight, departure
+    date, booking window, and price was already scraped within the last 15 minutes
+    for this route/source. This prevents rapid re-run duplication while allowing
+    subsequent live scrapes and price updates to be recorded.
     """
     if not observations:
         return 0
@@ -124,25 +122,24 @@ def insert_observations(conn, observations: list, route_id: int, source_id: int)
     with conn.cursor() as cursor:
         cursor.execute(
             """
-            SELECT flight_number, to_char(departure_date, 'YYYY-MM-DD'), advance_booking_window
+            SELECT flight_number, to_char(departure_date, 'YYYY-MM-DD'), advance_booking_window, raw_price_displayed
             FROM flight_observations
             WHERE route_id = %s AND source_id = %s
-              AND (scrape_timestamp AT TIME ZONE 'Asia/Kolkata')::date
-                  = (now() AT TIME ZONE 'Asia/Kolkata')::date
+              AND scrape_timestamp >= (now() - INTERVAL '15 minutes')
             """,
             (route_id, source_id)
         )
-        already_scraped_today = set(cursor.fetchall())
+        recently_scraped = set(cursor.fetchall())
 
     deduped = [
         obs for obs in observations
-        if (obs["flight_number"], obs["departure_date"], obs["advance_booking_window"])
-        not in already_scraped_today
+        if (obs["flight_number"], str(obs["departure_date"]), obs["advance_booking_window"], obs.get("raw_price_displayed"))
+        not in recently_scraped
     ]
-    skipped_same_day = len(observations) - len(deduped)
-    if skipped_same_day:
+    skipped_recent = len(observations) - len(deduped)
+    if skipped_recent:
         logger.info(
-            f"Skipping {skipped_same_day} observation(s) already scraped today "
+            f"Skipping {skipped_recent} observation(s) scraped within last 15 minutes with identical price "
             f"for route_id={route_id} source_id={source_id}."
         )
     observations = deduped

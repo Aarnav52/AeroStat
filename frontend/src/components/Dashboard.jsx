@@ -10,6 +10,7 @@ import {
   generateTimeSeriesData, TOP_ROUTES_DATA, AIRLINE_BREAKDOWN, 
   BOOKING_WINDOWS, LIVE_MONITORED_CORRIDORS, GOVERNANCE_STATS, SIMULATION_PRESETS
 } from '../data/mockData';
+import { fetchIndex } from '../api/apiService';
 import AirlineAnalytics from './AirlineAnalytics';
 import LiveDataPanel from './LiveDataPanel';
 
@@ -45,15 +46,10 @@ export default function Dashboard() {
         setIndexLoading(true);
         setIndexError(null);
 
-        const response = await fetch(
-          'http://localhost:8000/index/?route=DEL-BOM&window=T%2B1'
-        );
+        const routeParam = selectedRoute === 'ALL' ? 'DEL-BOM' : selectedRoute;
+        const windowParam = selectedWindow === 'ALL' ? 'T+1' : selectedWindow;
 
-        if (!response.ok) {
-          throw new Error(`API request failed: ${response.status}`);
-        }
-
-        const result = await response.json();
+        const result = await fetchIndex(routeParam, windowParam);
 
         console.log('Real APIx index response:', result);
 
@@ -68,7 +64,7 @@ export default function Dashboard() {
     };
 
     loadIndexData();
-  }, []);
+  }, [selectedRoute, selectedWindow]);
 
   // ---------------------------------------------------------
   // ACTIVE PRESET SHOCK FACTOR
@@ -323,9 +319,7 @@ export default function Dashboard() {
 
                 {indexLoading
                   ? '...'
-                  : indexError
-                    ? '—'
-                    : chartData[chartData.length - 1]?.geksIndex ?? '—'}
+                  : (chartData[chartData.length - 1]?.geksIndex ?? '—')}
 
               </span>
 
@@ -354,11 +348,11 @@ export default function Dashboard() {
 
               <span className="text-3xl font-extrabold text-white font-mono">
 
-                ₹{indexLoading
+                {indexLoading
                   ? '...'
-                  : indexError
-                    ? '—'
-                    : chartData[chartData.length - 1]?.avgFare?.toLocaleString('en-IN') ?? '—'}
+                  : chartData[chartData.length - 1]?.avgFare != null
+                    ? `₹${chartData[chartData.length - 1].avgFare.toLocaleString('en-IN')}`
+                    : '—'}
 
               </span>
 

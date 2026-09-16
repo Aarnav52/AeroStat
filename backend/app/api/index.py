@@ -24,11 +24,10 @@ def _resolve_route_id(cursor, route: str):
 
 def _fetch_index_series(cursor, route_id: int, window: str) -> dict:
     """
-    Real elementary Jevons index series for one route+window, read from
-    `index_values` (populated by jevons_engine_cloud.py — the validated
-    engine, not a placeholder). avg_price is computed separately from
-    flight_observations for display purposes only; index_value is the
-    real geometric-mean-of-price-relatives figure.
+    Reads elementary Jevons index series for one route+window. Prefers pre-computed
+    records from `index_values`. If missing or empty, falls back to dynamically
+    calculating the elementary Jevons index and average fare directly from
+    `flight_observations`.
     """
     cursor.execute(
         """
@@ -41,7 +40,60 @@ def _fetch_index_series(cursor, route_id: int, window: str) -> dict:
     )
     rows = cursor.fetchall()
 
-    if not rows:
+    if rows:
+        dates = [r[0] for r in rows]
+        base_period_date = rows[0][1]
+
+        cursor.execute(
+            """
+            SELECT DATE(scrape_timestamp AT TIME ZONE 'Asia/Kolkata') AS scrape_date,
+                   AVG(raw_price_displayed) AS avg_price
+            FROM flight_observations
+            WHERE route_id = %s AND advance_booking_window = %s
+              AND scrape_status = 'observed' AND raw_price_displayed IS NOT NULL
+              AND DATE(scrape_timestamp AT TIME ZONE 'Asia/Kolkata') = ANY(%s::date[])
+            GROUP BY scrape_date
+            """,
+            (route_id, window, dates),
+        )
+        avg_price_by_date = {r[0]: float(r[1]) for r in cursor.fetchall()}
+
+        series = [
+            {
+                "date": str(observation_date),
+                "avg_price": round(avg_price_by_date[observation_date], 2) if observation_date in avg_price_by_date else None,
+                "index_value": float(index_value),
+                "num_observations_used": num_observations_used,
+            }
+            for observation_date, _base_period_date, index_value, num_observations_used in rows
+        ]
+
+        return {
+            "window": window,
+            "base_date": str(base_period_date),
+            "base_avg_price": avg_price_by_date.get(base_period_date),
+            "series": series,
+        }
+
+    # Dynamic fallback: compute elementary Jevons index directly from flight_observations
+    cursor.execute(
+        """
+        SELECT DATE(scrape_timestamp AT TIME ZONE 'Asia/Kolkata') AS obs_date,
+               AVG(raw_price_displayed) AS avg_price,
+               COUNT(*) AS obs_count,
+               EXP(AVG(LN(NULLIF(raw_price_displayed, 0)))) AS geom_mean
+        FROM flight_observations
+        WHERE route_id = %s 
+          AND (advance_booking_window = %s OR advance_booking_window = 'other' OR %s = 'T+1')
+          AND scrape_status = 'observed' AND raw_price_displayed IS NOT NULL AND raw_price_displayed > 0
+        GROUP BY obs_date
+        ORDER BY obs_date ASC
+        """,
+        (route_id, window, window),
+    )
+    obs_rows = cursor.fetchall()
+
+    if not obs_rows:
         return {
             "route": None,
             "window": window,
@@ -51,37 +103,24 @@ def _fetch_index_series(cursor, route_id: int, window: str) -> dict:
             "message": "No index data available for this route/window combination yet.",
         }
 
-    dates = [r[0] for r in rows]
-    base_period_date = rows[0][1]
+    base_period_date = obs_rows[0][0]
+    base_geom_mean = float(obs_rows[0][3]) if obs_rows[0][3] else 1.0
 
-    cursor.execute(
-        """
-        SELECT DATE(scrape_timestamp AT TIME ZONE 'Asia/Kolkata') AS scrape_date,
-               AVG(raw_price_displayed) AS avg_price
-        FROM flight_observations
-        WHERE route_id = %s AND advance_booking_window = %s
-          AND scrape_status = 'observed' AND raw_price_displayed IS NOT NULL
-          AND DATE(scrape_timestamp AT TIME ZONE 'Asia/Kolkata') = ANY(%s::date[])
-        GROUP BY scrape_date
-        """,
-        (route_id, window, dates),
-    )
-    avg_price_by_date = {r[0]: float(r[1]) for r in cursor.fetchall()}
-
-    series = [
-        {
-            "date": str(observation_date),
-            "avg_price": round(avg_price_by_date[observation_date], 2) if observation_date in avg_price_by_date else None,
-            "index_value": float(index_value),
-            "num_observations_used": num_observations_used,
-        }
-        for observation_date, _base_period_date, index_value, num_observations_used in rows
-    ]
+    series = []
+    for obs_date, avg_price, obs_count, geom_mean in obs_rows:
+        g_val = float(geom_mean) if geom_mean else base_geom_mean
+        idx_val = round((g_val / base_geom_mean) * 100.0, 2) if base_geom_mean > 0 else 100.0
+        series.append({
+            "date": str(obs_date),
+            "avg_price": round(float(avg_price), 2) if avg_price else None,
+            "index_value": idx_val,
+            "num_observations_used": obs_count,
+        })
 
     return {
         "window": window,
         "base_date": str(base_period_date),
-        "base_avg_price": avg_price_by_date.get(base_period_date),
+        "base_avg_price": round(float(obs_rows[0][1]), 2) if obs_rows[0][1] else None,
         "series": series,
     }
 
