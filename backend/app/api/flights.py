@@ -14,14 +14,15 @@ class ScrapeRequest(BaseModel):
 @router.get("/")
 def get_flights(
     route: Optional[str] = Query(None, description="e.g. DEL-BOM"),
-    window: Optional[str] = Query(None, description="e.g. T+1")
+    window: Optional[str] = Query(None, description="e.g. T+1"),
+    limit: Optional[int] = Query(10000, description="Max records to return")
 ):
     """
     Fetch flights from the database with optional filtering.
     """
     query = """
         SELECT f.observation_id, f.airline_name, f.flight_number, f.departure_date, 
-               f.departure_time, f.scrape_timestamp,f.raw_price_displayed, f.advance_booking_window,
+               f.departure_time, f.scrape_timestamp, f.raw_price_displayed, f.advance_booking_window,
                r.origin_airport, r.destination_airport
         FROM flight_observations f
         JOIN routes r ON f.route_id = r.route_id
@@ -39,7 +40,9 @@ def get_flights(
         query += " AND f.advance_booking_window = %s"
         params.append(window)
         
-    query += " ORDER BY f.departure_date ASC, f.raw_price_displayed ASC LIMIT 1000"
+    query += " ORDER BY f.departure_date ASC, f.raw_price_displayed ASC"
+    if limit:
+        query += f" LIMIT {int(limit)}"
 
     results = []
     try:

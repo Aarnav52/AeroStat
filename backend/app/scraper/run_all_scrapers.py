@@ -73,7 +73,8 @@ def _store_flights(conn, flights, source_name, route, window, target_date):
         direct_flight_to_observation(f, route["route_id"], window, target_date, scrape_timestamp)
         for f in flights
     ]
-    return insert_observations(conn, observations, route["route_id"], source_id)
+    res = insert_observations(conn, observations, route["route_id"], source_id)
+    return res[0] if isinstance(res, tuple) else res
 
 
 def run_akasa(conn, route, window, target_date):

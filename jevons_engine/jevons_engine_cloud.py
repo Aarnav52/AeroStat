@@ -299,6 +299,7 @@ def _aggregate_to_jevons_grain(df: pd.DataFrame, merge_keys: List[str]) -> pd.Da
 def compute_apix_jevons_index(
     df: pd.DataFrame,
     dgca_route_weights: Optional[Dict[str, float]] = None,
+    include_base_date: bool = False,
 ) -> List[Dict[str, Any]]:
     """
     Calculates Elementary, Route-level, and National-level APIx Jevons indices.
@@ -385,16 +386,18 @@ def compute_apix_jevons_index(
 
     df_base_raw = df[df["observation_date"] == base_date].copy()
 
-    distinct_current_dates = sorted(
-        [d for d in df["observation_date"].unique() if d > base_date]
-    )
-
-    if not distinct_current_dates:
-        logger.warning(
-            "No observation dates strictly greater than the base date were found. "
-            "Evaluating base period against itself (Index = 100.0)."
+    if include_base_date:
+        distinct_current_dates = sorted(df["observation_date"].unique())
+    else:
+        distinct_current_dates = sorted(
+            [d for d in df["observation_date"].unique() if d > base_date]
         )
-        distinct_current_dates = [base_date]
+        if not distinct_current_dates:
+            logger.warning(
+                "No observation dates strictly greater than the base date were found. "
+                "Evaluating base period against itself (Index = 100.0)."
+            )
+            distinct_current_dates = [base_date]
 
     # -----------------------------------------------------------------------
     # Aggregate base period to the Jevons grain ONCE (outside the date loop)
@@ -409,7 +412,7 @@ def compute_apix_jevons_index(
 
     for curr_date in distinct_current_dates:
         curr_date_str = pd.to_datetime(curr_date).strftime("%Y-%m-%d")
-        logger.info(f"\n--- Processing Index for Current Date: {curr_date_str} (Base: {base_date_str}) ---")
+        logger.info(f"\n--- Processing Index for Date: {curr_date_str} (Base: {base_date_str}) ---")
 
         df_current_raw = df[df["observation_date"] == curr_date].copy()
 
@@ -585,30 +588,41 @@ def compute_apix_jevons_index(
 # path, and matches how every other write in this project already works.
 
 def push_to_supabase(
-    payload: List[Dict[str, Any]],
-    table_name: str = "index_values",
+    *args,
+    **kwargs
 ) -> int:
     """
     Idempotently inserts the computed index payload into the `index_values`
-    table via psycopg2.
-
-    Idempotency guarantee:
-      1. Collect all unique observation_date values from the payload.
-      2. Delete ALL existing index_values rows for those dates in ONE operation.
-      3. Insert the newly computed records in one batch.
-
-    This means re-running the engine for the same dates produces exactly the
-    same set of rows — no duplicate history accumulates.
-
-    Payload schema contract:
-      observation_date, base_period_date, index_type, route_id,
-      advance_booking_window, index_value, num_observations_used,
-      data_provenance_mix.
-    Note: calculated_at is not supplied — the DB DEFAULT NOW() populates it.
+    table via psycopg2 (or via Supabase client if a client mock is provided).
+    Supports both push_to_supabase(payload, table_name) and push_to_supabase(client, payload, table_name).
     """
+    client = None
+    payload = None
+    table_name = kwargs.get("table_name", "index_values")
+
+    if len(args) == 1:
+        payload = args[0]
+    elif len(args) == 2:
+        if isinstance(args[0], list):
+            payload, table_name = args[0], args[1]
+        else:
+            client, payload = args[0], args[1]
+    elif len(args) >= 3:
+        client, payload, table_name = args[0], args[1], args[2]
+    else:
+        payload = kwargs.get("payload", [])
+
     if not payload:
         logger.warning("Payload is empty. Nothing to insert into the database.")
         return 0
+
+    # If a Supabase client instance is passed (e.g. In unit tests), use it
+    if client is not None and hasattr(client, "table"):
+        observation_dates = sorted({row["observation_date"] for row in payload})
+        for obs_date in observation_dates:
+            client.table(table_name).delete().eq("observation_date", obs_date).execute()
+        client.table(table_name).insert(payload).execute()
+        return len(payload)
 
     database_url = os.environ.get("DATABASE_URL", "").strip()
     if not database_url:

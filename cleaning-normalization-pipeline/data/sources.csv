@@ -1,0 +1,8 @@
+source_id,source_name,source_type,base_url,robots_txt_status,rate_limit_notes,last_successful_scrape,is_active,created_at
+1,IndiGo Direct,airline_direct,https://www.goindigo.in,allowed,1 request / 5 sec,2026-09-14T08:10:00+00:00,TRUE,2026-08-01T05:30:00+00:00
+2,Air India Direct,airline_direct,https://www.airindia.com,allowed,1 request / 5 sec,2026-09-14T08:05:00+00:00,TRUE,2026-08-01T05:31:00+00:00
+3,Akasa Air Direct,airline_direct,https://www.akasaair.com,allowed,1 request / 6 sec,2026-09-14T07:55:00+00:00,TRUE,2026-08-01T05:32:00+00:00
+4,MakeMyTrip,ota,https://www.makemytrip.com,allowed,1 request / 8 sec,2026-09-14T08:00:00+00:00,TRUE,2026-08-01T05:33:00+00:00
+5,Cleartrip,ota,https://www.cleartrip.com,allowed,1 request / 8 sec,2026-09-14T07:50:00+00:00,TRUE,2026-08-01T05:34:00+00:00
+6,Goibibo,ota,https://www.goibibo.com,allowed,1 request / 8 sec,2026-09-14T07:45:00+00:00,TRUE,2026-08-01T05:35:00+00:00
+7,Broken Test Feed,ota,not-a-url,unknown,UNVALIDATED,2026-09-10T03:10:00+00:00,FALSE,2026-08-01T05:36:00+00:00

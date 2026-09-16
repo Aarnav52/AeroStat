@@ -117,7 +117,7 @@ def insert_observations(conn, observations: list, route_id: int, source_id: int)
     subsequent live scrapes and price updates to be recorded.
     """
     if not observations:
-        return 0
+        return 0, 0
 
     with conn.cursor() as cursor:
         cursor.execute(
@@ -144,7 +144,7 @@ def insert_observations(conn, observations: list, route_id: int, source_id: int)
         )
     observations = deduped
     if not observations:
-        return 0
+        return 0, skipped_same_day
 
     _apply_fee_decomposition(conn, observations, route_id)
 
@@ -160,6 +160,7 @@ def insert_observations(conn, observations: list, route_id: int, source_id: int)
         ) VALUES %s
         ON CONFLICT (route_id, source_id, flight_number, departure_date, scrape_timestamp)
         DO NOTHING
+        RETURNING observation_id
     """
     
     # Prepare data for execute_values
@@ -193,13 +194,12 @@ def insert_observations(conn, observations: list, route_id: int, source_id: int)
         ))
         
     with conn.cursor() as cursor:
-        # execute_values is much faster for bulk inserts
-        execute_values(cursor, query, values)
-        inserted_count = cursor.rowcount
+        inserted_rows = execute_values(cursor, query, values, fetch=True)
+        inserted_count = len(inserted_rows) if inserted_rows else 0
         conn.commit()
         
-    logger.info(f"Successfully inserted {inserted_count} new observations out of {len(observations)} total.")
-    return inserted_count
+    logger.info(f"Successfully inserted {inserted_count} new observations out of {len(observations)} total (skipped {skipped_same_day} duplicate/already scraped).")
+    return inserted_count, skipped_same_day
 
 if __name__ == "__main__":
     from app.db.connection import get_db_connection

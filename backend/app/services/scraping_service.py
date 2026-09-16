@@ -84,8 +84,11 @@ class ScrapingService:
                     window_result["flights_found"] = len(observations)
                     
                     # 3. Insert
-                    inserted = insert_observations(conn, observations, route_id, source_id)
+                    inserted, skipped = insert_observations(conn, observations, route_id, source_id)
                     window_result["rows_inserted"] = inserted
+                    window_result["skipped_duplicates"] = skipped
+                    if inserted == 0 and skipped > 0:
+                        window_result["info"] = f"{skipped} flights already scraped today (database is up to date)"
                     
                 except Exception as e:
                     logger.error(f"Unexpected error scraping {window}: {e}")

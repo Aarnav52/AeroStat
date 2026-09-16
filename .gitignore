@@ -37,3 +37,8 @@ data/source_documents/tariff_sheets_raw/
 .vscode
 .idea
 jevons_engine\run_engine.log
+.dist/
+.venv/
+.pytest_cache/
+*.egg-info/
+screen.png

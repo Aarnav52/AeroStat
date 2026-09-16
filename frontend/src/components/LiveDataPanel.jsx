@@ -211,7 +211,13 @@ export default function LiveDataPanel() {
             <span className="font-bold text-emerald-300">Scrape complete — {scrapeResult.status}</span>
             {scrapeResult.details?.map(d => (
               <div key={d.window} className="font-mono mt-1 text-emerald-400/80">
-                {d.window} ({d.target_date}): {d.flights_found} found · {d.rows_inserted} inserted
+                {d.window} ({d.target_date}): {d.flights_found} flights found · {
+                  d.rows_inserted > 0
+                    ? `${d.rows_inserted} new inserted into database`
+                    : d.skipped_duplicates > 0
+                      ? `${d.skipped_duplicates} already up to date in database`
+                      : `${d.rows_inserted} inserted`
+                }
                 {d.error && <span className="text-rose-400 ml-2">⚠ {d.error}</span>}
               </div>
             ))}

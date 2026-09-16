@@ -166,3 +166,18 @@ def get_index_summary(
                 results[window] = series_result
 
     return {"route": route, "index": results}
+
+
+@router.post("/pipeline/run")
+def trigger_pipeline():
+    """
+    Triggers the full cleaning pipeline and Jevons index calculation across
+    all flight observations in the database.
+    """
+    try:
+        from app.services.pipeline_service import pipeline_service
+        summary = pipeline_service.run_full_pipeline()
+        return summary
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
