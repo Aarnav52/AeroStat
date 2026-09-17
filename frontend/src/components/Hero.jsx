@@ -4,15 +4,11 @@ import { HERO_STATS } from '../data/mockData';
 
 export default function Hero({ onExploreClick, onWhitepaperClick }) {
   return (
-    <section className="relative pt-32 pb-20 overflow-hidden light-hero-bg text-slate-900 border-b border-sky-100">
+    <section className="relative pt-32 pb-20 overflow-hidden text-slate-900 border-b border-sky-100/40" style={{ background: 'transparent' }}>
       
-      {/* Background Decorative Mesh & Light Glows */}
+      {/* Background Decorative Mesh — subtle, transparent */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-tr from-sky-200/40 via-blue-100/30 to-sky-300/20 blur-3xl rounded-full opacity-70"></div>
-        <div className="absolute top-0 right-10 w-96 h-96 bg-sky-400/10 rounded-full blur-2xl"></div>
-        
-        {/* Subtle grid pattern overlay */}
-        <div className="absolute inset-0 opacity-[0.04] bg-[radial-gradient(#0284c7_1px,transparent_1px)] [background-size:24px_24px]"></div>
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-tr from-white/20 via-white/10 to-transparent blur-3xl rounded-full opacity-50"></div>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
@@ -24,16 +20,16 @@ export default function Hero({ onExploreClick, onWhitepaperClick }) {
         </div>
 
         {/* Hero Title */}
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.15] max-w-4xl mx-auto font-sans">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-950 tracking-tight leading-[1.15] max-w-4xl mx-auto font-sans drop-shadow-sm">
           The First Real-Time <br className="hidden sm:inline" />
           <span className="text-gradient-hero">Airfare Price Index</span> for India
         </h1>
 
         {/* Hero Subtitle */}
-        <p className="mt-6 text-base sm:text-lg text-slate-600 max-w-3xl mx-auto font-normal leading-relaxed">
-          Live benchmark tracking <strong className="text-slate-900 font-semibold">2,500+ real fares</strong> across
+        <p className="mt-6 text-base sm:text-lg text-slate-800 max-w-3xl mx-auto font-medium leading-relaxed drop-shadow-sm">
+          Live benchmark tracking <strong className="text-slate-950 font-bold">2,500+ real fares</strong> across
           7 domestic routes, 12 airlines, 5 booking windows (T+1, T+7, T+15, T+30, T+45),
-          aggregated via <strong className="text-slate-900 font-semibold">Jevons price relatives</strong> —
+          aggregated via <strong className="text-slate-950 font-bold">Jevons price relatives</strong> —
           multilateral GEKS aggregation and DGCA traffic-weighting are the next build phase.
         </p>
 
@@ -44,11 +40,11 @@ export default function Hero({ onExploreClick, onWhitepaperClick }) {
               key={idx} 
               className="light-section-card p-5 rounded-2xl text-left transition-all duration-300 transform hover:-translate-y-1"
             >
-              <span className="text-xs font-semibold text-slate-500 block uppercase tracking-wider mb-1">
+              <span className="text-xs font-semibold text-slate-700 block uppercase tracking-wider mb-1">
                 {stat.label}
               </span>
               <div className="flex items-baseline justify-between mt-1">
-                <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono tracking-tight">
+                <span className="text-2xl sm:text-3xl font-extrabold text-slate-950 font-mono tracking-tight">
                   {stat.value}
                 </span>
                 {stat.change && (
@@ -62,7 +58,7 @@ export default function Hero({ onExploreClick, onWhitepaperClick }) {
                   </span>
                 )}
               </div>
-              <span className="text-[11px] font-medium text-slate-400 mt-2 block font-sans">
+              <span className="text-[11px] font-semibold text-slate-600 mt-2 block font-sans">
                 {stat.period || stat.subtext}
               </span>
             </div>
@@ -89,7 +85,7 @@ export default function Hero({ onExploreClick, onWhitepaperClick }) {
         </div>
 
         {/* Methodology Sub-strip */}
-        <div className="mt-12 pt-6 border-t border-sky-200/60 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-500 font-medium">
+        <div className="mt-12 pt-6 border-t border-sky-300/60 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-800 font-semibold">
           <div className="flex items-center space-x-1.5">
             <Shield className="w-4 h-4 text-sky-600" />
             <span>MoSPI Inflation Aligned</span>

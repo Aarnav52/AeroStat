@@ -18,8 +18,14 @@ import LiveDataPanel from './LiveDataPanel';
 // reload, without hammering the API.
 const DATA_REFRESH_MS = 3 * 60 * 1000;
 
-export default function Dashboard() {
-  const [dashboardTab, setDashboardTab] = useState('macro'); // 'macro', 'airlines', 'telemetry'
+export default function Dashboard({ initialTab = 'macro' }) {
+  const [dashboardTab, setDashboardTab] = useState(initialTab);
+
+  useEffect(() => {
+    if (initialTab) {
+      setDashboardTab(initialTab);
+    }
+  }, [initialTab]);
 
   const [timeRange, setTimeRange] = useState('90D');
   const [selectedRoute, setSelectedRoute] = useState('ALL');
@@ -349,63 +355,7 @@ export default function Dashboard() {
         </div>
 
 
-        {/* =====================================================
-            DASHBOARD NAVIGATION TABS
-        ====================================================== */}
-        <div className="flex border-b border-slate-800/80 space-x-6 text-sm font-bold">
 
-          <button
-            onClick={() => setDashboardTab('macro')}
-            className={`pb-3 flex items-center space-x-2 transition-all border-b-2 ${
-              dashboardTab === 'macro'
-                ? 'border-sky-500 text-sky-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <BarChart3 className="w-4 h-4" />
-            <span>Macro APIx Index & CPI</span>
-          </button>
-
-
-          <button
-            onClick={() => setDashboardTab('airlines')}
-            className={`pb-3 flex items-center space-x-2 transition-all border-b-2 ${
-              dashboardTab === 'airlines'
-                ? 'border-sky-500 text-sky-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Plane className="w-4 h-4" />
-            <span>Airline Price Indices & Weights</span>
-          </button>
-
-
-          <button
-            onClick={() => setDashboardTab('telemetry')}
-            className={`pb-3 flex items-center space-x-2 transition-all border-b-2 ${
-              dashboardTab === 'telemetry'
-                ? 'border-sky-500 text-sky-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Activity className="w-4 h-4" />
-            <span>Corridor Telemetry & Governance</span>
-          </button>
-
-
-          <button
-            onClick={() => setDashboardTab('live')}
-            className={`pb-3 flex items-center space-x-2 transition-all border-b-2 ${
-              dashboardTab === 'live'
-                ? 'border-emerald-500 text-emerald-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Database className="w-4 h-4" />
-            <span>Live Scraped Data ✦</span>
-          </button>
-
-        </div>
 
 
         {/* =====================================================

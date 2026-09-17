@@ -1,0 +1,107 @@
+import React from 'react';
+import { 
+  Plane, 
+  Sparkles, 
+  Map, 
+  BarChart3, 
+  Layers, 
+  Clock, 
+  Calculator, 
+  Database, 
+  FileText, 
+  Activity,
+  BookOpen
+} from 'lucide-react';
+
+export default function Sidebar({ activeView, setActiveView }) {
+  const navItems = [
+    { id: 'map', label: 'Airfare Intelligence', icon: Map, badge: 'LIVE' },
+    { id: 'macro', label: 'Route Analytics', icon: BarChart3 },
+    { id: 'airlines', label: 'Airline Analytics', icon: Plane },
+    { id: 'windows', label: 'Booking Windows', icon: Clock },
+    { id: 'decomposition', label: 'Fare Decomposition', icon: Calculator },
+    { id: 'methodology', label: 'Methodology', icon: FileText, badge: 'NEW' },
+  ];
+
+  const handleNavClick = (id) => {
+    setActiveView(id);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  return (
+    <aside className="w-16 lg:w-60 bg-slate-950/95 backdrop-blur-xl border-r border-slate-800/80 flex flex-col justify-between fixed top-0 left-0 bottom-0 z-50 transition-all duration-300 shadow-2xl">
+      {/* Top Brand Header */}
+      <div>
+        <div 
+          onClick={() => handleNavClick('landing')}
+          className="p-4 lg:px-5 lg:py-4 flex items-center space-x-3 border-b border-slate-800/80 cursor-pointer group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-blue-600 flex items-center justify-center shadow-lg shadow-sky-500/20 text-white font-bold shrink-0 transform transition group-hover:scale-105">
+            <Plane className="w-5 h-5 stroke-[2.5]" />
+          </div>
+          <div className="hidden lg:block overflow-hidden">
+            <div className="flex items-center space-x-2">
+              <span className="text-lg font-extrabold tracking-tight text-white font-sans">AeroStat</span>
+            </div>
+            <p className="text-[10px] text-slate-400 font-medium truncate">Real-Time Airfare Intelligence</p>
+          </div>
+        </div>
+
+        {/* Navigation Items */}
+        <nav className="p-2 lg:p-3 space-y-1 mt-2">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeView === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleNavClick(item.id)}
+                className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all relative group cursor-pointer ${
+                  isActive
+                    ? 'bg-sky-500/15 text-sky-400 border border-sky-500/30 shadow-sm shadow-sky-500/10'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/80'
+                }`}
+                title={item.label}
+              >
+                {/* Glowing left accent line for active item */}
+                {isActive && (
+                  <span className="absolute left-0 top-2 bottom-2 w-1 bg-sky-400 rounded-r-full shadow-glow" />
+                )}
+                
+                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-sky-400' : 'text-slate-400 group-hover:text-slate-200'}`} />
+                <span className="hidden lg:inline truncate">{item.label}</span>
+                
+                {item.badge && (
+                  <span className={`hidden lg:inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold border ml-auto font-mono ${
+                    item.badge === 'LIVE' 
+                      ? 'bg-sky-500/20 text-sky-300 border-sky-400/30'
+                      : 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30'
+                  }`}>
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* Bottom System Status */}
+      <div className="p-3 border-t border-slate-800/80 bg-slate-950/60">
+        <div className="hidden lg:flex items-center justify-between p-2 rounded-xl bg-slate-900/60 border border-slate-800 text-[11px] mb-2">
+          <div className="flex items-center space-x-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="font-semibold text-slate-300 font-mono">System Live</span>
+          </div>
+          <span className="text-[10px] text-slate-500 font-mono">IST</span>
+        </div>
+
+        <div className="flex items-center justify-between text-slate-400 text-xs px-1">
+          <div className="hidden lg:block text-[10px] text-slate-500 font-mono">
+            v2.4 • MoSPI & DGCA Calibrated
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+}

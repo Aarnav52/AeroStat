@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Database,
   Filter,
@@ -16,15 +16,24 @@ import {
   BarChart3
 } from 'lucide-react';
 
+/* ================================================================
+   PIPELINE NODE DEFINITIONS
+   Each node is a step on the continuous vertical dotted line.
+   ================================================================ */
+const PIPELINE_NODES = [
+  { id: 1, label: 'Data Acquisition',  icon: Database },
+  { id: 2, label: 'Cleaning & Validation', icon: Filter },
+  { id: 3, label: 'Booking Windows',   icon: Clock },
+  { id: 4, label: 'GEKS Methodology',  icon: Calculator },
+  { id: 5, label: 'MoSPI Comparison',  icon: LineChart },
+];
+
+/* ================================================================
+   COMPONENT
+   ================================================================ */
 export default function PipelineSection() {
   const [activeTabDedupe, setActiveTabDedupe] = useState('cleaned');
   const [selectedWindow, setSelectedWindow] = useState('T+1');
-
-  // ---------------------------------------------------------
-  // GEKS METHODOLOGY DEMONSTRATION
-  // This is only an educational demonstration.
-  // It is NOT the production index calculated by the backend.
-  // ---------------------------------------------------------
 
   const [priceP1, setPriceP1] = useState(5000);
   const [priceP2, setPriceP2] = useState(6500);
@@ -32,11 +41,78 @@ export default function PipelineSection() {
 
   const geksIndex = ((priceP3 / priceP1) * 100).toFixed(2);
 
-  return (
-    <section className="relative py-24 bg-gradient-to-b from-sky-50/50 via-white to-slate-950 text-slate-900 border-b border-slate-800">
+  /* ── Smooth lerp airplane on zig-zag S-curve path ── */
+  const [planePos, setPlanePos] = useState({ x: 300, y: 200, angle: 90, activeNode: 0 });
+  const pathRef = useRef(null);
+  const sectionRef = useRef(null);
+  const targetProgressRef = useRef(0);
+  const currentProgressRef = useRef(0);
 
-      {/* Decorative SVG connector */}
-      <div className="hidden lg:block absolute inset-0 pointer-events-none z-0">
+  useEffect(() => {
+    let animId;
+    const updatePosition = () => {
+      const diff = targetProgressRef.current - currentProgressRef.current;
+      if (Math.abs(diff) > 0.0002) {
+        currentProgressRef.current += diff * 0.12; // Smooth fluid interpolation
+      } else {
+        currentProgressRef.current = targetProgressRef.current;
+      }
+
+      if (pathRef.current) {
+        try {
+          const pathLength = pathRef.current.getTotalLength();
+          const p = Math.max(0, Math.min(1, currentProgressRef.current)) * pathLength;
+          const point = pathRef.current.getPointAtLength(p);
+          const nextPoint = pathRef.current.getPointAtLength(Math.min(pathLength, p + 4));
+
+          const dx = nextPoint.x - point.x;
+          const dy = nextPoint.y - point.y;
+          const angle = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
+
+          // Determine active pipeline node based on progress
+          let activeNode = 1;
+          if (currentProgressRef.current > 0.8) activeNode = 5;
+          else if (currentProgressRef.current > 0.6) activeNode = 4;
+          else if (currentProgressRef.current > 0.4) activeNode = 3;
+          else if (currentProgressRef.current > 0.2) activeNode = 2;
+
+          setPlanePos({ x: point.x, y: point.y, angle, activeNode });
+        } catch (err) {
+          // Fallback
+        }
+      }
+
+      animId = requestAnimationFrame(updatePosition);
+    };
+
+    const handleScroll = () => {
+      if (!sectionRef.current) return;
+      const rect = sectionRef.current.getBoundingClientRect();
+      const windowHeight = window.innerHeight;
+      const totalScrollable = rect.height;
+      const currentScroll = Math.max(0, windowHeight - rect.top);
+      const progress = Math.min(1, Math.max(0, currentScroll / (totalScrollable + windowHeight * 0.4)));
+      targetProgressRef.current = progress;
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    animId = requestAnimationFrame(updatePosition);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (animId) cancelAnimationFrame(animId);
+    };
+  }, []);
+
+  return (
+    <section ref={sectionRef} className="relative py-24 bg-transparent border-b border-sky-200/50">
+
+      {/* ─────────────────────────────────────────────────────
+          ZIG-ZAG S-CURVE DOTTED PATH + SCROLL-DRIVEN AIRPLANE
+          Only visible on lg+
+         ───────────────────────────────────────────────────── */}
+      <div className="hidden lg:block absolute inset-0 pointer-events-none" style={{ zIndex: 0 }}>
         <svg
           className="w-full h-full"
           preserveAspectRatio="none"
@@ -51,32 +127,43 @@ export default function PipelineSection() {
               x2="0%"
               y2="100%"
             >
-              <stop
-                offset="0%"
-                stopColor="#0284c7"
-                stopOpacity="0.8"
-              />
-              <stop
-                offset="50%"
-                stopColor="#38bdf8"
-                stopOpacity="0.9"
-              />
-              <stop
-                offset="100%"
-                stopColor="#0c8de4"
-                stopOpacity="0.7"
-              />
+              <stop offset="0%" stopColor="#0369a1" stopOpacity="0.9" />
+              <stop offset="50%" stopColor="#0284c7" stopOpacity="1" />
+              <stop offset="100%" stopColor="#0369a1" stopOpacity="0.8" />
             </linearGradient>
           </defs>
 
+          {/* ONE continuous zig-zag S-curve dotted path connecting all cards */}
           <path
+            ref={pathRef}
             d="M 300 200 C 150 400, 150 600, 900 700 C 1100 800, 1100 1100, 300 1200 C 100 1300, 100 1600, 900 1700 C 1100 1800, 1100 2100, 600 2300"
+            stroke="#0369a1"
+            strokeWidth="3"
+            strokeDasharray="10 8"
+            fill="none"
             className="s-connect-line"
+            opacity="0.7"
           />
+
+          {/* Scroll-Driven Airplane Badge on the zig-zag path */}
+          <g transform={`translate(${planePos.x}, ${planePos.y}) rotate(${planePos.angle})`}>
+            {/* Outer glow */}
+            <circle r="18" fill="#0369a1" fillOpacity="0.12" />
+            {/* Badge */}
+            <circle r="14" fill="#0284c7" stroke="#ffffff" strokeWidth="2" />
+            {/* Plane arrow */}
+            <path
+              d="M 0 -7 L 5 6 L 0 4 L -5 6 Z"
+              fill="#ffffff"
+            />
+          </g>
         </svg>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-32">
+      {/* ─────────────────────────────────────────────────────
+          CONTENT CARDS (foreground)
+         ───────────────────────────────────────────────────── */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative space-y-32" style={{ zIndex: 10 }}>
 
         {/* =====================================================
             STEP 1 — DATA ACQUISITION
@@ -94,11 +181,11 @@ export default function PipelineSection() {
               <span>Real-Time Data Acquisition</span>
             </div>
 
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight drop-shadow-sm">
               Automated Airfare Data Collection
             </h2>
 
-            <p className="text-slate-600 text-base leading-relaxed">
+            <p className="text-slate-800 text-base leading-relaxed font-medium">
               AeroStat collects airfare observations for selected Indian
               domestic routes using Google Flights data accessed through
               the SerpApi API. Each observation records the flight,
@@ -365,11 +452,11 @@ export default function PipelineSection() {
               <span>Cleaning & Validation</span>
             </div>
 
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight drop-shadow-sm">
               Validating and Normalizing Fare Observations
             </h2>
 
-            <p className="text-slate-600 text-base leading-relaxed">
+            <p className="text-slate-800 text-base leading-relaxed font-medium">
               The ingestion layer validates the fields required by the
               observation schema and removes unusable fare records.
               Sold-out results or flights without a displayed price are
@@ -397,17 +484,17 @@ export default function PipelineSection() {
               <span>Temporal Aggregation</span>
             </div>
 
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight drop-shadow-sm">
               Standardizing Advance Booking Windows
             </h2>
 
-            <p className="text-slate-600 text-base leading-relaxed">
+            <p className="text-slate-800 text-base leading-relaxed font-medium">
               Airfare depends strongly on how far in advance a ticket is
               observed. AeroStat stratifies observations across 5 advance
               booking windows: T+1, T+7, T+15, T+30, and T+45.
             </p>
 
-            <p className="text-slate-500 text-sm leading-relaxed">
+            <p className="text-slate-700 text-sm leading-relaxed font-medium">
               Sampling across multiple lead-time horizons isolates dynamic yield management curves from macro inflation signals.
             </p>
 
@@ -673,17 +760,17 @@ export default function PipelineSection() {
               <span>Index Methodology</span>
             </div>
 
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight drop-shadow-sm">
               Multilateral GEKS for Airfare Price Measurement
             </h2>
 
-            <p className="text-slate-600 text-base leading-relaxed">
+            <p className="text-slate-800 text-base leading-relaxed font-medium">
               The planned AeroStat methodology uses a multilateral GEKS
               framework to reduce chain drift and improve transitivity
               when comparing prices across multiple periods.
             </p>
 
-            <p className="text-slate-500 text-sm leading-relaxed">
+            <p className="text-slate-700 text-sm leading-relaxed font-medium">
               The current backend is still in the data-acquisition and
               basic index stage. The production GEKS calculation will be
               connected to the statistical/index layer after the scraper
@@ -711,17 +798,17 @@ export default function PipelineSection() {
               <span>MoSPI Comparison</span>
             </div>
 
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight drop-shadow-sm">
               Comparing the Airfare Signal with Official CPI Data
             </h2>
 
-            <p className="text-slate-600 text-base leading-relaxed">
+            <p className="text-slate-800 text-base leading-relaxed font-medium">
               AeroStat is intended to provide a higher-frequency airfare
               signal that can eventually be compared with official
               MoSPI CPI transport statistics.
             </p>
 
-            <p className="text-slate-500 text-sm leading-relaxed">
+            <p className="text-slate-700 text-sm leading-relaxed font-medium">
               MoSPI CPI data is published at a different frequency and
               geographic/statistical level, so the final comparison
               requires compatible aggregation and calibration.

@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { Plane, BarChart2, Layers, ShieldCheck } from 'lucide-react';
 import { fetchFlights } from '../api/apiService';
+import { AirlineLogo } from './airlineLogos';
 
 const DATA_REFRESH_MS = 3 * 60 * 1000;
 
@@ -619,7 +620,10 @@ export default function AirlineAnalytics() {
 
               {[
                 'T+1',
-                'T+30'
+                'T+7',
+                'T+15',
+                'T+30',
+                'T+45'
               ].map(
                 (window) => (
 
@@ -733,13 +737,14 @@ export default function AirlineAnalytics() {
                   !showIndigo
                 )
               }
-              className={`px-3 py-1.5 rounded-lg border transition-all ${
+              className={`px-3 py-1.5 rounded-lg border transition-all flex items-center space-x-1.5 ${
                 showIndigo
                   ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
                   : 'bg-slate-900 text-slate-500 border-slate-800 line-through'
               }`}
             >
-              IndiGo
+              <AirlineLogo name="IndiGo" className="w-4 h-4" />
+              <span>IndiGo</span>
             </button>
 
             <button
@@ -748,13 +753,14 @@ export default function AirlineAnalytics() {
                   !showAirIndia
                 )
               }
-              className={`px-3 py-1.5 rounded-lg border transition-all ${
+              className={`px-3 py-1.5 rounded-lg border transition-all flex items-center space-x-1.5 ${
                 showAirIndia
                   ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
                   : 'bg-slate-900 text-slate-500 border-slate-800 line-through'
               }`}
             >
-              Air India
+              <AirlineLogo name="Air India" className="w-4 h-4" />
+              <span>Air India</span>
             </button>
 
             <button
@@ -763,13 +769,14 @@ export default function AirlineAnalytics() {
                   !showAkasa
                 )
               }
-              className={`px-3 py-1.5 rounded-lg border transition-all ${
+              className={`px-3 py-1.5 rounded-lg border transition-all flex items-center space-x-1.5 ${
                 showAkasa
                   ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                   : 'bg-slate-900 text-slate-500 border-slate-800 line-through'
               }`}
             >
-              Akasa Air
+              <AirlineLogo name="Akasa Air" className="w-4 h-4" />
+              <span>Akasa Air</span>
             </button>
 
             <button
@@ -778,13 +785,14 @@ export default function AirlineAnalytics() {
                   !showSpicejet
                 )
               }
-              className={`px-3 py-1.5 rounded-lg border transition-all ${
+              className={`px-3 py-1.5 rounded-lg border transition-all flex items-center space-x-1.5 ${
                 showSpicejet
                   ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40'
                   : 'bg-slate-900 text-slate-500 border-slate-800 line-through'
               }`}
             >
-              SpiceJet
+              <AirlineLogo name="SpiceJet" className="w-4 h-4" />
+              <span>SpiceJet</span>
             </button>
 
           </div>
@@ -1055,8 +1063,9 @@ export default function AirlineAnalytics() {
                     className="hover:bg-slate-900/60 transition-colors"
                   >
 
-                    <td className="p-3.5 font-bold text-white">
-                      {item.airline}
+                    <td className="p-3.5 font-bold text-white flex items-center space-x-2">
+                      <AirlineLogo name={item.airline} className="w-5 h-5" />
+                      <span>{item.airline}</span>
                     </td>
 
                     <td className="p-3.5 font-mono text-sky-400 font-bold">

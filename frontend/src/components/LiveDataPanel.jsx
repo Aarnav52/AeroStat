@@ -9,6 +9,7 @@ import {
 import {
   fetchRoutes, fetchFlights, triggerScrape, fetchIndex, fetchHealth,
 } from '../api/apiService';
+import { AirlineLogo } from './airlineLogos';
 
 const DATA_REFRESH_MS = 3 * 60 * 1000;
 
@@ -358,7 +359,10 @@ export default function LiveDataPanel() {
               <tbody className="divide-y divide-slate-800/60 font-medium">
                 {flights.slice(0, 50).map((f) => (
                   <tr key={f.observation_id} className="hover:bg-slate-900/60 transition-colors">
-                    <td className="p-3.5 text-slate-200">{f.airline_name}</td>
+                    <td className="p-3.5 text-slate-200 flex items-center space-x-2">
+                      <AirlineLogo name={f.airline_name} className="w-4 h-4" />
+                      <span>{f.airline_name}</span>
+                    </td>
                     <td className="p-3.5 font-mono text-slate-300">{f.flight_number}</td>
                     <td className="p-3.5 font-mono text-slate-300">{f.departure_date}</td>
                     <td className="p-3.5 font-mono text-slate-400">{f.departure_time || '—'}</td>
