@@ -143,6 +143,7 @@ export default function MethodologySection() {
       {/* -------------------------------------------------------------
           3. PROGRESSIVE STORYTELLING PIPELINE FLOW DIAGRAM (11 STAGES)
       ------------------------------------------------------------- */}
+      {activeTab === 'pipeline' && (
       <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -200,10 +201,13 @@ export default function MethodologySection() {
           })}
         </div>
       </div>
+      )}
 
       {/* -------------------------------------------------------------
           4. ELEMENTARY PRICE INDEX (JEVONS GEOMETRIC MEAN)
       ------------------------------------------------------------- */}
+      {activeTab === 'math' && (
+      <div className="space-y-10">
       <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 space-y-8">
         <div>
           <div className="inline-flex items-center space-x-2 px-2.5 py-1 rounded-md bg-sky-500/10 text-sky-400 text-xs font-mono font-bold mb-2">
@@ -576,6 +580,8 @@ export default function MethodologySection() {
           </div>
         </div>
       </div>
+      </div>
+      )}
 
     </div>
   );

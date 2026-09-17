@@ -18,8 +18,8 @@ export default function Sidebar({ activeView, setActiveView }) {
     { id: 'map', label: 'Airfare Intelligence', icon: Map, badge: 'LIVE' },
     { id: 'macro', label: 'Route Analytics', icon: BarChart3 },
     { id: 'airlines', label: 'Airline Analytics', icon: Plane },
-    { id: 'windows', label: 'Booking Windows', icon: Clock },
-    { id: 'decomposition', label: 'Fare Decomposition', icon: Calculator },
+    { id: 'telemetry', label: 'Governance & Telemetry', icon: Activity },
+    { id: 'live', label: 'Live Scraper', icon: Database, badge: 'LIVE' },
     { id: 'methodology', label: 'Methodology', icon: FileText, badge: 'NEW' },
   ];
 

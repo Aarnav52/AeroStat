@@ -145,17 +145,112 @@ export default function PipelineSection() {
             opacity="0.7"
           />
 
-          {/* Scroll-Driven Airplane Badge on the zig-zag path */}
+          {/* Scroll-Driven 3D Airplane on the zig-zag path */}
           <g transform={`translate(${planePos.x}, ${planePos.y}) rotate(${planePos.angle})`}>
-            {/* Outer glow */}
-            <circle r="18" fill="#0369a1" fillOpacity="0.12" />
-            {/* Badge */}
-            <circle r="14" fill="#0284c7" stroke="#ffffff" strokeWidth="2" />
-            {/* Plane arrow */}
-            <path
-              d="M 0 -7 L 5 6 L 0 4 L -5 6 Z"
-              fill="#ffffff"
-            />
+            <defs>
+              {/* Fuselage gradient — top-lit for 3D depth */}
+              <linearGradient id="fuselageGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#f8fafc" />
+                <stop offset="40%" stopColor="#e2e8f0" />
+                <stop offset="100%" stopColor="#94a3b8" />
+              </linearGradient>
+              {/* Wing gradient — darker underside */}
+              <linearGradient id="wingGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#cbd5e1" />
+                <stop offset="100%" stopColor="#64748b" />
+              </linearGradient>
+              {/* Tail gradient */}
+              <linearGradient id="tailGrad" x1="0.5" y1="0" x2="0.5" y2="1">
+                <stop offset="0%" stopColor="#0284c7" />
+                <stop offset="100%" stopColor="#0369a1" />
+              </linearGradient>
+              {/* Drop shadow filter */}
+              <filter id="planeShadow" x="-50%" y="-50%" width="200%" height="200%">
+                <feDropShadow dx="0.5" dy="1.5" stdDeviation="1.2" floodColor="#0c4a6e" floodOpacity="0.35" />
+              </filter>
+            </defs>
+
+            <g filter="url(#planeShadow)">
+              {/* === MAIN WINGS === */}
+              {/* Left wing */}
+              <path
+                d="M -1.5 1 L -18 5 L -16 6.5 L -1.5 3.5 Z"
+                fill="url(#wingGrad)"
+                stroke="#94a3b8"
+                strokeWidth="0.3"
+              />
+              {/* Right wing */}
+              <path
+                d="M 1.5 1 L 18 5 L 16 6.5 L 1.5 3.5 Z"
+                fill="url(#wingGrad)"
+                stroke="#94a3b8"
+                strokeWidth="0.3"
+              />
+
+              {/* === ENGINE PODS (under wings) === */}
+              <ellipse cx="-10" cy="5" rx="1.8" ry="1.2" fill="#94a3b8" stroke="#64748b" strokeWidth="0.3" />
+              <ellipse cx="10" cy="5" rx="1.8" ry="1.2" fill="#94a3b8" stroke="#64748b" strokeWidth="0.3" />
+
+              {/* === FUSELAGE === */}
+              <path
+                d="M 0 -14 C -2.2 -12, -2.8 -6, -2.8 0 C -2.8 6, -2.2 10, -1.5 12 L 0 13 L 1.5 12 C 2.2 10, 2.8 6, 2.8 0 C 2.8 -6, 2.2 -12, 0 -14 Z"
+                fill="url(#fuselageGrad)"
+                stroke="#94a3b8"
+                strokeWidth="0.5"
+              />
+
+              {/* Fuselage highlight stripe — center shine for 3D roundness */}
+              <path
+                d="M 0 -12 C -0.8 -10, -1 -4, -1 2 C -1 7, -0.6 10, 0 12"
+                fill="none"
+                stroke="#ffffff"
+                strokeWidth="0.8"
+                opacity="0.6"
+              />
+
+              {/* === COCKPIT WINDOWS === */}
+              <path
+                d="M -1 -11.5 C -1 -12.5, 1 -12.5, 1 -11.5 L 0.8 -10 L -0.8 -10 Z"
+                fill="#0c4a6e"
+                opacity="0.8"
+              />
+
+              {/* === PASSENGER WINDOWS (tiny dots) === */}
+              <circle cx="-1" cy="-7" r="0.4" fill="#475569" opacity="0.5" />
+              <circle cx="-1" cy="-5" r="0.4" fill="#475569" opacity="0.5" />
+              <circle cx="-1" cy="-3" r="0.4" fill="#475569" opacity="0.5" />
+              <circle cx="-1" cy="-1" r="0.4" fill="#475569" opacity="0.5" />
+              <circle cx="-1" cy="1" r="0.4" fill="#475569" opacity="0.4" />
+
+              {/* === TAIL FIN (vertical stabilizer) === */}
+              <path
+                d="M 0 10 L -1 12.5 L 0 14 L 1 12.5 Z"
+                fill="url(#tailGrad)"
+                stroke="#0369a1"
+                strokeWidth="0.3"
+              />
+              {/* Tail accent — airline livery stripe */}
+              <path
+                d="M 0 10.5 L 0 13"
+                stroke="#ffffff"
+                strokeWidth="0.5"
+                opacity="0.6"
+              />
+
+              {/* === HORIZONTAL STABILIZERS (tail wings) === */}
+              <path
+                d="M -1.5 11 L -8 13 L -7 14 L -1.5 12.5 Z"
+                fill="url(#wingGrad)"
+                stroke="#94a3b8"
+                strokeWidth="0.2"
+              />
+              <path
+                d="M 1.5 11 L 8 13 L 7 14 L 1.5 12.5 Z"
+                fill="url(#wingGrad)"
+                stroke="#94a3b8"
+                strokeWidth="0.2"
+              />
+            </g>
           </g>
         </svg>
       </div>
