@@ -12,6 +12,11 @@ from agents.tools.analysis_tools import (
     get_booking_window_analysis,
     get_cabin_analysis,
 )
+from agents.tools.quality_and_meta_tools import (
+    get_data_quality_summary,
+    get_supporting_observations,
+    get_route_details,
+)
 
 __all__ = [
     "get_latest_cpi",
@@ -21,4 +26,7 @@ __all__ = [
     "get_airline_price_analysis",
     "get_booking_window_analysis",
     "get_cabin_analysis",
+    "get_data_quality_summary",
+    "get_supporting_observations",
+    "get_route_details",
 ]
