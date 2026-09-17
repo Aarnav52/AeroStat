@@ -17,6 +17,12 @@ from agents.tools.quality_and_meta_tools import (
     get_supporting_observations,
     get_route_details,
 )
+from agents.tools.registry import (
+    TOOL_REGISTRY,
+    get_tool_registry,
+    get_tool_schemas,
+    dispatch_tool,
+)
 
 __all__ = [
     "get_latest_cpi",
@@ -29,4 +35,8 @@ __all__ = [
     "get_data_quality_summary",
     "get_supporting_observations",
     "get_route_details",
+    "TOOL_REGISTRY",
+    "get_tool_registry",
+    "get_tool_schemas",
+    "dispatch_tool",
 ]
