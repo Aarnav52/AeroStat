@@ -846,3 +846,6 @@ Third-party data keeps its own terms. Examples include the DGCA traffic mirror (
 <p align="center">
   Built for Smart India Hackathon 2026 · SIH26056 · Ministry of Statistics and Programme Implementation
 </p>
+
+## AI Analyst Development
+Initial branch setup for the AI-assisted analyst tooling.
