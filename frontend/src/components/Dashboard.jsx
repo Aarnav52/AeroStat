@@ -179,16 +179,22 @@ export default function Dashboard() {
   // REAL BACKEND DATA → DASHBOARD FORMAT
   // ---------------------------------------------------------
   const chartData = useMemo(() => {
-    // Real backend data available → use it, apply shockFactor for scenario simulation
+    // Real backend data available → use it, deduplicate by date, apply shockFactor for scenario simulation
     if (realIndexData.length > 0) {
-      return realIndexData.map((item) => ({
-        date: item.date,
-        fullDate: item.date,
-        geksIndex: parseFloat((item.index_value * activeShockFactor).toFixed(2)),
-        avgFare: item.avg_price ? Math.round(item.avg_price * activeShockFactor) : null,
-        mospiCPI: null,   // backend doesn't expose this yet; MoSPI line hidden when null
-        volatility: null,
-      }));
+      const dateMap = new Map();
+      realIndexData.forEach((item) => {
+        if (item && item.date && !dateMap.has(item.date)) {
+          dateMap.set(item.date, {
+            date: item.date,
+            fullDate: item.date,
+            geksIndex: parseFloat((item.index_value * activeShockFactor).toFixed(2)),
+            avgFare: item.avg_price ? Math.round(item.avg_price * activeShockFactor) : null,
+            mospiCPI: null,   // backend doesn't expose this yet; MoSPI line hidden when null
+            volatility: null,
+          });
+        }
+      });
+      return Array.from(dateMap.values());
     }
 
     // Fallback: generate mock data respecting the selected time range and scenario shock

@@ -41,6 +41,16 @@ def _fetch_index_series(cursor, route_id: int, window: str) -> dict:
     rows = cursor.fetchall()
 
     if rows:
+        # Deduplicate by observation_date, keeping the latest record per date to prevent duplicate X-axis dates
+        seen_dates = set()
+        deduped_rows = []
+        for r in rows:
+            obs_date_str = str(r[0])
+            if obs_date_str not in seen_dates:
+                seen_dates.add(obs_date_str)
+                deduped_rows.append(r)
+        rows = deduped_rows
+
         dates = [r[0] for r in rows]
         base_period_date = rows[0][1]
 
@@ -106,12 +116,17 @@ def _fetch_index_series(cursor, route_id: int, window: str) -> dict:
     base_period_date = obs_rows[0][0]
     base_geom_mean = float(obs_rows[0][3]) if obs_rows[0][3] else 1.0
 
+    seen_dates = set()
     series = []
     for obs_date, avg_price, obs_count, geom_mean in obs_rows:
+        date_str = str(obs_date)
+        if date_str in seen_dates:
+            continue
+        seen_dates.add(date_str)
         g_val = float(geom_mean) if geom_mean else base_geom_mean
         idx_val = round((g_val / base_geom_mean) * 100.0, 2) if base_geom_mean > 0 else 100.0
         series.append({
-            "date": str(obs_date),
+            "date": date_str,
             "avg_price": round(float(avg_price), 2) if avg_price else None,
             "index_value": idx_val,
             "num_observations_used": obs_count,

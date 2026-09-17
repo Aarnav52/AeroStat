@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts';
@@ -126,12 +126,20 @@ export default function LiveDataPanel() {
   const currentIndex = indexData?.series?.at(-1)?.index_value;
   const baseIndex    = indexData?.base_avg_price;
 
-  // Chart data from index series
-  const chartData = (indexData?.series || []).map(s => ({
-    date: s.date,
-    indexValue: s.index_value,
-    avgPrice: s.avg_price,
-  }));
+  // Chart data from index series (deduplicated by date)
+  const chartData = useMemo(() => {
+    const map = new Map();
+    (indexData?.series || []).forEach(s => {
+      if (s && s.date && !map.has(s.date)) {
+        map.set(s.date, {
+          date: s.date,
+          indexValue: s.index_value,
+          avgPrice: s.avg_price,
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [indexData]);
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (

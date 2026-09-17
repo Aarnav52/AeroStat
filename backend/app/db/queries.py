@@ -108,13 +108,11 @@ def _apply_fee_decomposition(conn, observations: list, route_id: int) -> None:
 def insert_observations(conn, observations: list, route_id: int, source_id: int) -> int:
     """
     Inserts a list of parsed flight observations into the database.
-    Skips duplicates based on unique constraint.
+    Skips duplicate quotes scraped within the last 24 hours for the same
+    flight_number, departure_date, advance_booking_window, and price.
 
-    The DB's unique constraint includes scrape_timestamp, which is set to
-    "now" per scrape call. Skip any observation whose exact flight, departure
-    date, booking window, and price was already scraped within the last 15 minutes
-    for this route/source. This prevents rapid re-run duplication while allowing
-    subsequent live scrapes and price updates to be recorded.
+    This prevents duplicate identical flight observations from accumulating in
+    Supabase on re-scrapes while allowing legitimate price changes and new flights to be inserted.
     """
     if not observations:
         return 0, 0
@@ -125,7 +123,7 @@ def insert_observations(conn, observations: list, route_id: int, source_id: int)
             SELECT flight_number, to_char(departure_date, 'YYYY-MM-DD'), advance_booking_window, raw_price_displayed
             FROM flight_observations
             WHERE route_id = %s AND source_id = %s
-              AND scrape_timestamp >= (now() - INTERVAL '15 minutes')
+              AND (scrape_timestamp >= (now() - INTERVAL '24 hours') OR DATE(scrape_timestamp AT TIME ZONE 'Asia/Kolkata') = CURRENT_DATE)
             """,
             (route_id, source_id)
         )
@@ -139,7 +137,7 @@ def insert_observations(conn, observations: list, route_id: int, source_id: int)
     skipped_recent = len(observations) - len(deduped)
     if skipped_recent:
         logger.info(
-            f"Skipping {skipped_recent} observation(s) scraped within last 15 minutes with identical price "
+            f"Skipping {skipped_recent} duplicate observation(s) scraped within last 24h with identical price "
             f"for route_id={route_id} source_id={source_id}."
         )
     observations = deduped
