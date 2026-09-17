@@ -32,7 +32,7 @@ export default function Hero({ onExploreClick, onWhitepaperClick }) {
         {/* Hero Subtitle */}
         <p className="mt-6 text-base sm:text-lg text-slate-600 max-w-3xl mx-auto font-normal leading-relaxed">
           Live benchmark tracking <strong className="text-slate-900 font-semibold">2,500+ real fares</strong> across
-          7 domestic routes, 12 airlines, T+1 and T+30 booking windows,
+          7 domestic routes, 12 airlines, 5 booking windows (T+1, T+7, T+15, T+30, T+45),
           aggregated via <strong className="text-slate-900 font-semibold">Jevons price relatives</strong> —
           multilateral GEKS aggregation and DGCA traffic-weighting are the next build phase.
         </p>

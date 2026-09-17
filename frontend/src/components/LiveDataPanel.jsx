@@ -183,7 +183,10 @@ export default function LiveDataPanel() {
             className="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-sky-500"
           >
             <option value="T+1">T+1 (Tomorrow)</option>
+            <option value="T+7">T+7 (1 Week)</option>
+            <option value="T+15">T+15 (15 Days)</option>
             <option value="T+30">T+30 (30 Days)</option>
+            <option value="T+45">T+45 (45 Days)</option>
           </select>
 
           {/* Refresh */}

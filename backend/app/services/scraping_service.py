@@ -22,14 +22,22 @@ class ScrapingService:
 
     def calculate_date_for_window(self, window: str) -> str:
         """
-        Calculates the target departure date for a given booking window.
+        Calculates the target departure date for a given booking window (T+1, T+7, T+15, T+30, T+45).
         """
         today = datetime.now(self.timezone)
         
         if window == "T+1":
             target = today + timedelta(days=1)
+        elif window == "T+7":
+            target = today + timedelta(days=7)
+        elif window == "T+15":
+            target = today + timedelta(days=15)
         elif window == "T+30":
             target = today + timedelta(days=30)
+        elif window == "T+45":
+            target = today + timedelta(days=45)
+        elif window.startswith("T+") and window[2:].isdigit():
+            target = today + timedelta(days=int(window[2:]))
         else:
             raise ValueError(f"Unsupported booking window: {window}")
             

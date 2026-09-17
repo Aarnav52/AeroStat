@@ -403,13 +403,12 @@ export default function PipelineSection() {
 
             <p className="text-slate-600 text-base leading-relaxed">
               Airfare depends strongly on how far in advance a ticket is
-              observed. The current MVP therefore separates observations
-              into two fixed booking windows: T+1 and T+30.
+              observed. AeroStat stratifies observations across 5 advance
+              booking windows: T+1, T+7, T+15, T+30, and T+45.
             </p>
 
             <p className="text-slate-500 text-sm leading-relaxed">
-              Additional windows such as T+7, T+15 and T+45 can be added
-              later without changing the underlying observation model.
+              Sampling across multiple lead-time horizons isolates dynamic yield management curves from macro inflation signals.
             </p>
 
           </div>
@@ -422,56 +421,60 @@ export default function PipelineSection() {
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
 
                 <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  Current Booking Windows
+                  Active Booking Horizons (5 Windows)
                 </span>
 
                 <span className="text-xs font-semibold text-sky-600 font-mono">
-                  MVP
+                  Multi-Horizon
                 </span>
 
               </div>
 
 
-              <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2.5">
 
-                {['T+1', 'T+30'].map((window) => (
+                {[
+                  { id: 'T+1', sub: 'Spot (Next-day)' },
+                  { id: 'T+7', sub: 'Short (1 Week)' },
+                  { id: 'T+15', sub: 'Medium (15 Days)' },
+                  { id: 'T+30', sub: 'Advance (30 Days)' },
+                  { id: 'T+45', sub: 'Long (45 Days)' },
+                ].map((item) => (
 
                   <button
-                    key={window}
-                    onClick={() => setSelectedWindow(window)}
-                    className={`p-4 rounded-xl border text-left transition-all ${
-                      selectedWindow === window
+                    key={item.id}
+                    onClick={() => setSelectedWindow(item.id)}
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      selectedWindow === item.id
                         ? 'bg-sky-600 text-white border-sky-600 shadow-md scale-[1.02]'
                         : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-sky-50'
                     }`}
                   >
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
 
                       <Clock
-                        className={`w-4 h-4 ${
-                          selectedWindow === window
+                        className={`w-3.5 h-3.5 ${
+                          selectedWindow === item.id
                             ? 'text-white'
                             : 'text-sky-600'
                         }`}
                       />
 
-                      <span className="text-sm font-bold">
-                        {window}
+                      <span className="text-xs font-bold">
+                        {item.id}
                       </span>
 
                     </div>
 
                     <span
-                      className={`text-xs block mt-2 ${
-                        selectedWindow === window
+                      className={`text-[10px] block mt-1 ${
+                        selectedWindow === item.id
                           ? 'text-sky-100'
                           : 'text-slate-500'
                       }`}
                     >
-                      {window === 'T+1'
-                        ? 'Next-day departure'
-                        : '30-day advance observation'}
+                      {item.sub}
                     </span>
 
                   </button>

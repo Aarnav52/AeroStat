@@ -33,7 +33,7 @@ export default function Footer({ onOpenWhitepaper }) {
             <ul className="space-y-2">
               <li><a href="#pipeline" className="hover:text-sky-400 transition-colors">2,500+ Real-Fare Ingestion Pipeline</a></li>
               <li><a href="#deduplication" className="hover:text-sky-400 transition-colors">Ancillary Noise Filter</a></li>
-              <li><a href="#booking-windows" className="hover:text-sky-400 transition-colors">T+1 & T+30 Booking Windows</a></li>
+              <li><a href="#booking-windows" className="hover:text-sky-400 transition-colors">5 Booking Windows (T+1 to T+45)</a></li>
               <li><a href="#geks-methodology" className="hover:text-sky-400 transition-colors">Multilateral GEKS Math</a></li>
               <li><a href="#mospi-calibration" className="hover:text-sky-400 transition-colors">MoSPI CPI Transport Alignment</a></li>
             </ul>

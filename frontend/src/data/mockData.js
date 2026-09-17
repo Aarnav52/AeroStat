@@ -7,7 +7,7 @@ export const HERO_STATS = [
   { label: 'Real Fare Observations', value: '2,574', subtext: '100% real_scraped, zero synthetic', status: 'neutral' },
   { label: 'Active Routes', value: '7', subtext: 'DEL-BOM, DEL-BLR, BOM-BLR + 4 more', status: 'neutral' },
   { label: 'Airlines Tracked', value: '12', subtext: 'via SerpApi + direct Akasa/SpiceJet', status: 'neutral' },
-  { label: 'Booking Windows', value: 'T+1 · T+30', subtext: 'every 6h / daily, automated', status: 'neutral' }
+  { label: 'Booking Windows', value: '5 Windows (T+1…T+45)', subtext: 'multi-horizon sampling', status: 'neutral' }
 ];
 
 export const LIVE_TICKER_FEED = [
