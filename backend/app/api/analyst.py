@@ -19,6 +19,7 @@ if _ROOT_DIR not in sys.path:
     sys.path.insert(0, _ROOT_DIR)
 
 from agents.tools.registry import get_tool_schemas, dispatch_tool, TOOL_REGISTRY
+from app.services.gemini_client import GeminiClientError, get_configured_gemini_client
 
 router = APIRouter()
 
@@ -30,6 +31,10 @@ router = APIRouter()
 class ToolExecutionRequest(BaseModel):
     tool_name: str
     arguments: Optional[Dict[str, Any]] = None
+
+
+class AnalystQueryRequest(BaseModel):
+    question: str
 
 
 class CPIComparisonRequest(BaseModel):
@@ -81,6 +86,17 @@ def execute_analyst_tool(req: ToolExecutionRequest):
         )
     result = dispatch_tool(req.tool_name, req.arguments or {})
     return _handle_tool_result(result)
+
+
+@router.post("/query")
+def query_analyst(req: AnalystQueryRequest):
+    """Ask Gemini an analyst question and execute only registry-approved tools."""
+    if not req.question.strip():
+        raise HTTPException(status_code=400, detail="question must not be empty")
+    try:
+        return get_configured_gemini_client().answer(req.question)
+    except GeminiClientError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 # =============================================================================
