@@ -19,7 +19,7 @@ if _ROOT_DIR not in sys.path:
     sys.path.insert(0, _ROOT_DIR)
 
 from agents.tools.registry import get_tool_schemas, dispatch_tool, TOOL_REGISTRY
-from app.services.gemini_client import GeminiClientError, get_configured_gemini_client
+from app.services.groq_client import GroqClientError, get_configured_groq_client
 
 router = APIRouter()
 
@@ -90,12 +90,12 @@ def execute_analyst_tool(req: ToolExecutionRequest):
 
 @router.post("/query")
 def query_analyst(req: AnalystQueryRequest):
-    """Ask Gemini an analyst question and execute only registry-approved tools."""
+    """Ask Groq an analyst question and execute only registry-approved tools."""
     if not req.question.strip():
         raise HTTPException(status_code=400, detail="question must not be empty")
     try:
-        return get_configured_gemini_client().answer(req.question)
-    except GeminiClientError as exc:
+        return get_configured_groq_client().answer(req.question)
+    except GroqClientError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
