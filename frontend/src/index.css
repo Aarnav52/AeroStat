@@ -21,24 +21,93 @@ body {
   font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
 }
 
-/* Glassmorphism Cards */
-.glass-panel {
-  background: rgba(13, 20, 36, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
-}
+/* 
+==================================================
+   LIQUID GLASS MATERIAL SYSTEM
+   Premium iOS-inspired frosted glass components
+================================================== 
+*/
 
-.glass-card-glow {
-  position: relative;
+/* LEVEL 1 — SOFT GLASS: For small cards, icons, secondary controls */
+.glass-soft {
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.1), 
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.glass-card-glow:hover {
+.glass-soft:hover {
+  background: rgba(30, 41, 59, 0.5);
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+/* LEVEL 2 — ELEVATED GLASS: For KPI cards, major panels, important controls */
+.glass-elevated {
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.65) 0%, rgba(9, 13, 22, 0.85) 100%);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 10px 30px -10px rgba(0, 0, 0, 0.5), 
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Subtle inner light for elevated glass */
+.glass-elevated::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.3), transparent);
+  opacity: 0.5;
+}
+
+.glass-elevated:hover {
   transform: translateY(-2px);
-  border-color: rgba(56, 189, 248, 0.35);
-  box-shadow: 0 20px 40px -15px rgba(2, 132, 199, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+  border-color: rgba(56, 189, 248, 0.25);
+  box-shadow: 
+    0 15px 35px -10px rgba(0, 0, 0, 0.6), 
+    0 0 15px -5px rgba(56, 189, 248, 0.15),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* LEVEL 3 — STRONG GLASS: For sidebar, dropdowns, floating navigation */
+.glass-strong {
+  background: rgba(9, 13, 22, 0.85);
+  backdrop-filter: blur(40px) saturate(200%);
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.7),
+    inset 1px 0 0 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Segmented Control Base */
+.glass-segmented {
+  background: rgba(9, 13, 22, 0.6);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 9999px;
+  padding: 4px;
+}
+
+/* Segmented Control Active Tab */
+.glass-tab-active {
+  background: rgba(30, 41, 59, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.2),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.15);
+  color: #38bdf8; /* Aviation Blue Accent */
 }
 
 /* S-Curve SVG Connecting Path Styling */

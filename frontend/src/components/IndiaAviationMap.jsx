@@ -111,7 +111,7 @@ export default function IndiaAviationMap({
   };
 
   return (
-    <div className="relative w-full h-[520px] sm:h-[600px] glass-panel rounded-3xl border border-slate-800/90 overflow-hidden bg-slate-950/80 shadow-2xl flex items-center justify-center p-2">
+    <div className="relative w-full h-[520px] sm:h-[600px] glass-elevated rounded-3xl overflow-hidden shadow-2xl flex items-center justify-center p-2">
       
       {/* Background Geographic Grid & Atmosphere */}
       <div className="absolute inset-0 opacity-[0.05] bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none" />
@@ -142,7 +142,7 @@ export default function IndiaAviationMap({
               key={location.id}
               id={location.id}
               d={location.path}
-              className="fill-slate-900/60 stroke-slate-800/80 stroke-[1.5px] hover:fill-slate-800 transition-colors"
+              className="fill-slate-800/80 stroke-slate-700 stroke-[1.5px] hover:fill-slate-700 transition-colors"
             />
           ))}
 

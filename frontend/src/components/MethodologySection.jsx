@@ -78,12 +78,12 @@ export default function MethodologySection() {
           </p>
         </div>
 
-        <div className="flex items-center space-x-2 bg-slate-900 p-1.5 rounded-2xl border border-slate-800 self-start md:self-auto">
+        <div className="flex glass-segmented self-start md:self-auto">
           <button 
             onClick={() => setActiveTab('pipeline')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
               activeTab === 'pipeline' 
-                ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/20' 
+                ? 'glass-tab-active' 
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -91,9 +91,9 @@ export default function MethodologySection() {
           </button>
           <button 
             onClick={() => setActiveTab('math')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
               activeTab === 'math' 
-                ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/20' 
+                ? 'glass-tab-active' 
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -106,7 +106,7 @@ export default function MethodologySection() {
           2. METHODOLOGY STATUS SUMMARY MATRICES
       ------------------------------------------------------------- */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="glass-panel p-5 rounded-2xl border border-emerald-500/20 bg-emerald-950/10">
+        <div className="glass-elevated p-5 rounded-2xl border-emerald-500/20 bg-emerald-950/10">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-mono font-bold text-emerald-400 uppercase">Core Methodology Status</span>
             {renderStatusBadge('IMPLEMENTED')}
@@ -117,7 +117,7 @@ export default function MethodologySection() {
           </p>
         </div>
 
-        <div className="glass-panel p-5 rounded-2xl border border-amber-500/20 bg-amber-950/10">
+        <div className="glass-elevated p-5 rounded-2xl border-amber-500/20 bg-amber-950/10">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-mono font-bold text-amber-400 uppercase">Live Scraper Coverage</span>
             {renderStatusBadge('PARTIALLY_LIVE')}
@@ -128,7 +128,7 @@ export default function MethodologySection() {
           </p>
         </div>
 
-        <div className="glass-panel p-5 rounded-2xl border border-sky-500/20 bg-sky-950/10">
+        <div className="glass-elevated p-5 rounded-2xl border-sky-500/20 bg-sky-950/10">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-mono font-bold text-sky-400 uppercase">Next Milestone</span>
             {renderStatusBadge('PLANNED')}
@@ -144,7 +144,7 @@ export default function MethodologySection() {
           3. PROGRESSIVE STORYTELLING PIPELINE FLOW DIAGRAM (11 STAGES)
       ------------------------------------------------------------- */}
       {activeTab === 'pipeline' && (
-      <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 space-y-6">
+      <div className="glass-elevated p-6 sm:p-8 rounded-3xl space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
@@ -166,7 +166,7 @@ export default function MethodologySection() {
             return (
               <div 
                 key={idx}
-                className="group relative p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 hover:border-sky-500/40 hover:bg-slate-900/90 transition-all duration-300 flex flex-col justify-between"
+                className="group relative p-5 rounded-2xl glass-soft hover:border-sky-500/40 hover:bg-slate-900/90 transition-all duration-300 flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-center justify-between mb-3">
@@ -208,7 +208,7 @@ export default function MethodologySection() {
       ------------------------------------------------------------- */}
       {activeTab === 'math' && (
       <div className="space-y-10">
-      <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 space-y-8">
+      <div className="glass-elevated p-6 sm:p-8 rounded-3xl space-y-8">
         <div>
           <div className="inline-flex items-center space-x-2 px-2.5 py-1 rounded-md bg-sky-500/10 text-sky-400 text-xs font-mono font-bold mb-2">
             <span>Core Mathematical Foundation</span>
@@ -300,7 +300,7 @@ export default function MethodologySection() {
       {/* -------------------------------------------------------------
           5. BOOKING-WINDOW WEIGHTING
       ------------------------------------------------------------- */}
-      <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 space-y-6">
+      <div className="glass-elevated p-6 sm:p-8 rounded-3xl space-y-6">
         <div>
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
@@ -382,7 +382,7 @@ export default function MethodologySection() {
       {/* -------------------------------------------------------------
           6. DGCA PASSENGER-VOLUME WEIGHTING
       ------------------------------------------------------------- */}
-      <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 space-y-6">
+      <div className="glass-elevated p-6 sm:p-8 rounded-3xl space-y-6">
         <div>
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
@@ -444,7 +444,7 @@ export default function MethodologySection() {
       {/* -------------------------------------------------------------
           7. FARE DECOMPOSITION
       ------------------------------------------------------------- */}
-      <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 space-y-6">
+      <div className="glass-elevated p-6 sm:p-8 rounded-3xl space-y-6">
         <div>
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
@@ -511,7 +511,7 @@ export default function MethodologySection() {
       {/* -------------------------------------------------------------
           8. DATA QUALITY & CLEANING
       ------------------------------------------------------------- */}
-      <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 space-y-6">
+      <div className="glass-elevated p-6 sm:p-8 rounded-3xl space-y-6">
         <div>
           <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
             <Filter className="w-5 h-5 text-sky-400" />
@@ -541,7 +541,7 @@ export default function MethodologySection() {
       {/* -------------------------------------------------------------
           9. HIERARCHICAL INDEX STRUCTURE
       ------------------------------------------------------------- */}
-      <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 space-y-6">
+      <div className="glass-elevated p-6 sm:p-8 rounded-3xl space-y-6">
         <div>
           <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-sky-400" />

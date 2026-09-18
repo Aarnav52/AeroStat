@@ -198,10 +198,10 @@ export default function AirfareIntelligencePage() {
       </div>
 
       {/* MAP MODE SWITCHER BAR & LEGEND */}
-      <div className="glass-panel p-3 rounded-2xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="glass-elevated p-3 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         
         {/* Mode Segmented Buttons */}
-        <div className="flex flex-wrap items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800/80 text-xs font-semibold">
+        <div className="flex glass-segmented">
           {[
             { id: 'pressure', label: 'Airfare Pressure' },
             { id: 'stress', label: 'Market Stress (Pax Weighted)' },
@@ -211,9 +211,9 @@ export default function AirfareIntelligencePage() {
             <button
               key={mode.id}
               onClick={() => setMapMode(mode.id)}
-              className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-full transition-all text-xs font-semibold ${
                 mapMode === mode.id
-                  ? 'bg-sky-600 text-white shadow-md'
+                  ? 'glass-tab-active'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -224,14 +224,14 @@ export default function AirfareIntelligencePage() {
 
         {/* Window Selector if mode is 'window' or overall horizon selector */}
         <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-semibold">
+          <div className="flex glass-segmented">
             {['T+1', 'T+7', 'T+15', 'T+30', 'T+45'].map((win) => (
               <button
                 key={win}
                 onClick={() => setSelectedWindow(win)}
-                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-full transition-all text-xs font-semibold ${
                   selectedWindow === win
-                    ? 'bg-sky-500/20 text-sky-300 border border-sky-400/40 font-mono font-bold'
+                    ? 'glass-tab-active'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -267,8 +267,8 @@ export default function AirfareIntelligencePage() {
 
         {/* Right: Airfare Signals Panel */}
         <div className="lg:col-span-4 space-y-4">
-          <div className="glass-panel p-5 rounded-3xl border border-slate-800/90 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="glass-elevated p-5 rounded-3xl space-y-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <h3 className="text-sm font-extrabold text-white flex items-center gap-2 uppercase tracking-wider">
                 <Activity className="w-4 h-4 text-sky-400" />
                 Airfare Signals
@@ -281,7 +281,7 @@ export default function AirfareIntelligencePage() {
             {/* Signal 1: Highest Airfare Pressure */}
             <div 
               onClick={() => signals.highestPressure && setSelectedRouteId(signals.highestPressure.id)}
-              className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-sky-500/40 transition-all cursor-pointer group"
+              className="p-3.5 rounded-2xl glass-soft hover:border-sky-500/40 transition-all cursor-pointer group"
             >
               <div className="flex items-center justify-between text-xs mb-1">
                 <span className="font-bold text-rose-400 flex items-center gap-1.5 uppercase text-[10px] tracking-wider">
@@ -303,7 +303,7 @@ export default function AirfareIntelligencePage() {
             {/* Signal 2: Highest Passenger Volume (DGCA Volume) */}
             <div 
               onClick={() => signals.highestPax && setSelectedRouteId(signals.highestPax.id)}
-              className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-sky-500/40 transition-all cursor-pointer group"
+              className="p-3.5 rounded-2xl glass-soft hover:border-sky-500/40 transition-all cursor-pointer group"
             >
               <div className="flex items-center justify-between text-xs mb-1">
                 <span className="font-bold text-sky-400 flex items-center gap-1.5 uppercase text-[10px] tracking-wider">
@@ -325,7 +325,7 @@ export default function AirfareIntelligencePage() {
             {/* Signal 3: Largest Price Shock */}
             <div 
               onClick={() => signals.largestShock && setSelectedRouteId(signals.largestShock.id)}
-              className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-sky-500/40 transition-all cursor-pointer group"
+              className="p-3.5 rounded-2xl glass-soft hover:border-sky-500/40 transition-all cursor-pointer group"
             >
               <div className="flex items-center justify-between text-xs mb-1">
                 <span className="font-bold text-amber-400 flex items-center gap-1.5 uppercase text-[10px] tracking-wider">
@@ -348,8 +348,8 @@ export default function AirfareIntelligencePage() {
       </div>
 
       {/* SELECTED CORRIDOR DETAIL PANEL */}
-      <div className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+      <div className="glass-elevated p-6 rounded-3xl space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
           <div>
             <div className="flex items-center space-x-3">
               <span className="text-xl sm:text-2xl font-extrabold text-white font-mono tracking-tight">
@@ -380,46 +380,46 @@ export default function AirfareIntelligencePage() {
 
         {/* Detailed Metrics Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4 text-xs font-mono">
-          <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800">
-            <span className="text-[10px] text-slate-500 uppercase block font-sans">Lowest Fare</span>
+          <div className="p-3.5 rounded-2xl glass-soft">
+            <span className="text-[10px] text-slate-400 uppercase block font-sans">Lowest Fare</span>
             <span className="text-base font-bold text-emerald-400 mt-1 block">
               {activeRouteData.minPrice ? `₹${activeRouteData.minPrice.toLocaleString('en-IN')}` : 'N/A'}
             </span>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800">
-            <span className="text-[10px] text-slate-500 uppercase block font-sans">Highest Fare</span>
+          <div className="p-3.5 rounded-2xl glass-soft">
+            <span className="text-[10px] text-slate-400 uppercase block font-sans">Highest Fare</span>
             <span className="text-base font-bold text-rose-400 mt-1 block">
               {activeRouteData.maxPrice ? `₹${activeRouteData.maxPrice.toLocaleString('en-IN')}` : 'N/A'}
             </span>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800">
-            <span className="text-[10px] text-slate-500 uppercase block font-sans">DGCA Pax Traffic</span>
+          <div className="p-3.5 rounded-2xl glass-soft">
+            <span className="text-[10px] text-slate-400 uppercase block font-sans">DGCA Pax Traffic</span>
             <span className="text-base font-bold text-sky-400 mt-1 block">
               {activeRouteData.dgcaPax ? `${(activeRouteData.dgcaPax / 1000).toFixed(1)}k/mo` : 'N/A'}
             </span>
             <span className="text-[9px] text-slate-500 block font-sans mt-0.5">Statutory Volume</span>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800">
-            <span className="text-[10px] text-slate-500 uppercase block font-sans">Scraped Quotes</span>
+          <div className="p-3.5 rounded-2xl glass-soft">
+            <span className="text-[10px] text-slate-400 uppercase block font-sans">Scraped Quotes</span>
             <span className="text-base font-bold text-white mt-1 block">
               {activeRouteData.obsCount}
             </span>
             <span className="text-[9px] text-slate-500 block font-sans mt-0.5">DB Observations</span>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800">
-            <span className="text-[10px] text-slate-500 uppercase block font-sans">Pax Weight</span>
+          <div className="p-3.5 rounded-2xl glass-soft">
+            <span className="text-[10px] text-slate-400 uppercase block font-sans">Pax Weight</span>
             <span className="text-base font-bold text-sky-400 mt-1 block">
               {activeRouteData.weight ? `${(activeRouteData.weight * 100).toFixed(1)}%` : 'N/A'}
             </span>
             <span className="text-[9px] text-slate-500 block font-sans mt-0.5">National Weight</span>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800">
-            <span className="text-[10px] text-slate-500 uppercase block font-sans">DoD Price Shift</span>
+          <div className="p-3.5 rounded-2xl glass-soft">
+            <span className="text-[10px] text-slate-400 uppercase block font-sans">DoD Price Shift</span>
             <span className={`text-base font-bold mt-1 block ${activeRouteData.dodChange >= 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
               {activeRouteData.dodChange >= 0 ? '+' : ''}{activeRouteData.dodChange}%
             </span>
@@ -427,7 +427,7 @@ export default function AirfareIntelligencePage() {
         </div>
 
         {/* BOOKING WINDOW VISUAL COMPARISON BOX */}
-        <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-3">
+        <div className="p-4 rounded-2xl glass-soft space-y-3">
           <div className="flex items-center justify-between text-xs font-bold text-white">
             <span className="flex items-center gap-1.5 uppercase text-[10px] tracking-wider text-slate-400">
               <Clock className="w-3.5 h-3.5 text-sky-400" />
@@ -437,22 +437,22 @@ export default function AirfareIntelligencePage() {
           </div>
 
           <div className="grid grid-cols-3 gap-3 font-mono text-xs text-center">
-            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-              <span className="text-[10px] text-slate-500 block">T+1 (Tomorrow)</span>
+            <div className="p-3 rounded-xl glass-soft">
+              <span className="text-[10px] text-slate-400 block">T+1 (Tomorrow)</span>
               <span className="text-sm font-bold text-sky-400 mt-1 block">
                 {activeRouteData.avgPrice ? `₹${activeRouteData.avgPrice.toLocaleString('en-IN')}` : 'N/A'}
               </span>
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 opacity-80">
-              <span className="text-[10px] text-slate-500 block">T+7 (1 Week)</span>
+            <div className="p-3 rounded-xl glass-soft opacity-80">
+              <span className="text-[10px] text-slate-400 block">T+7 (1 Week)</span>
               <span className="text-sm font-bold text-white mt-1 block">
                 {activeRouteData.avgPrice ? `₹${Math.round(activeRouteData.avgPrice * 0.92).toLocaleString('en-IN')}` : 'N/A'}
               </span>
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 opacity-60">
-              <span className="text-[10px] text-slate-500 block">T+30 (30 Days)</span>
+            <div className="p-3 rounded-xl glass-soft opacity-60">
+              <span className="text-[10px] text-slate-400 block">T+30 (30 Days)</span>
               <span className="text-sm font-bold text-emerald-400 mt-1 block">
                 {activeRouteData.avgPrice ? `₹${Math.round(activeRouteData.avgPrice * 0.78).toLocaleString('en-IN')}` : 'N/A'}
               </span>

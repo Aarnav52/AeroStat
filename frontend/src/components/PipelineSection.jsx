@@ -106,7 +106,7 @@ export default function PipelineSection() {
   }, []);
 
   return (
-    <section ref={sectionRef} className="relative py-24 bg-transparent border-b border-sky-200/50">
+    <section ref={sectionRef} className="relative py-24 bg-transparent border-b border-white/5">
 
       {/* ─────────────────────────────────────────────────────
           ZIG-ZAG S-CURVE DOTTED PATH + SCROLL-DRIVEN AIRPLANE
@@ -276,11 +276,11 @@ export default function PipelineSection() {
               <span>Real-Time Data Acquisition</span>
             </div>
 
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight drop-shadow-sm">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight drop-shadow-sm">
               Automated Airfare Data Collection
             </h2>
 
-            <p className="text-slate-800 text-base leading-relaxed font-medium">
+            <p className="text-slate-300 text-base leading-relaxed font-medium">
               AeroStat collects airfare observations for selected Indian
               domestic routes using Google Flights data accessed through
               the SerpApi API. Each observation records the flight,
@@ -316,13 +316,13 @@ export default function PipelineSection() {
 
           <div className="lg:col-span-6">
 
-            <div className="light-section-card p-6 rounded-2xl border border-sky-200 shadow-xl bg-white relative overflow-hidden">
+            <div className="glass-elevated p-6 rounded-2xl relative overflow-hidden">
 
-              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center justify-between pb-4 border-b border-white/10">
 
                 <div className="flex items-center space-x-2">
-                  <Zap className="w-4 h-4 text-sky-600" />
-                  <span className="font-bold text-xs uppercase text-slate-800 tracking-wider">
+                  <Zap className="w-4 h-4 text-sky-400" />
+                  <span className="font-bold text-xs uppercase text-white tracking-wider">
                     Acquisition Pipeline
                   </span>
                 </div>
@@ -335,20 +335,20 @@ export default function PipelineSection() {
 
               <div className="mt-4 space-y-3">
 
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <div className="p-4 rounded-xl glass-soft">
 
                   <div className="flex items-center gap-3">
 
-                    <div className="w-10 h-10 rounded-lg bg-sky-100 flex items-center justify-center">
-                      <Server className="w-5 h-5 text-sky-600" />
+                    <div className="w-10 h-10 rounded-lg glass-soft flex items-center justify-center">
+                      <Server className="w-5 h-5 text-sky-400" />
                     </div>
 
                     <div>
-                      <span className="font-bold text-sm text-slate-900 block">
+                      <span className="font-bold text-sm text-white block">
                         Google Flights
                       </span>
 
-                      <span className="text-xs text-slate-500">
+                      <span className="text-xs text-slate-400">
                         Data source accessed through SerpApi
                       </span>
                     </div>
@@ -361,20 +361,20 @@ export default function PipelineSection() {
                   <RefreshCw className="w-4 h-4 text-sky-500" />
                 </div>
 
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <div className="p-4 rounded-xl glass-soft">
 
                   <div className="flex items-center gap-3">
 
-                    <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                      <Database className="w-5 h-5 text-emerald-600" />
+                    <div className="w-10 h-10 rounded-lg glass-soft flex items-center justify-center">
+                      <Database className="w-5 h-5 text-emerald-400" />
                     </div>
 
                     <div>
-                      <span className="font-bold text-sm text-slate-900 block">
+                      <span className="font-bold text-sm text-white block">
                         PostgreSQL / Supabase
                       </span>
 
-                      <span className="text-xs text-slate-500">
+                      <span className="text-xs text-slate-400">
                         flight_observations
                       </span>
                     </div>
@@ -385,11 +385,11 @@ export default function PipelineSection() {
 
               </div>
 
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
+              <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-400 font-medium">
 
                 <span>6 Active Routes</span>
 
-                <span className="text-emerald-600 font-bold flex items-center">
+                <span className="text-emerald-400 font-bold flex items-center">
                   Data Pipeline Active
                   <CheckCircle2 className="w-3 h-3 ml-1" />
                 </span>
@@ -414,23 +414,23 @@ export default function PipelineSection() {
 
           <div className="lg:col-span-6 order-2 lg:order-1">
 
-            <div className="light-section-card p-6 rounded-2xl border border-sky-200 shadow-xl bg-white">
+            <div className="glass-elevated p-6 rounded-2xl">
 
               <div className="flex items-center justify-between mb-4">
 
-                <span className="text-xs font-bold uppercase text-slate-800 tracking-wider flex items-center gap-1.5">
-                  <Filter className="w-4 h-4 text-sky-600" />
+                <span className="text-xs font-bold uppercase text-white tracking-wider flex items-center gap-1.5">
+                  <Filter className="w-4 h-4 text-sky-400" />
                   Data Validation
                 </span>
 
-                <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-semibold">
+                <div className="flex glass-segmented">
 
                   <button
                     onClick={() => setActiveTabDedupe('cleaned')}
-                    className={`px-3 py-1 rounded-md transition-all ${
+                    className={`px-3 py-1 rounded-full transition-all text-xs font-semibold ${
                       activeTabDedupe === 'cleaned'
-                        ? 'bg-sky-600 text-white shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? 'glass-tab-active'
+                        : 'text-slate-400 hover:text-white'
                     }`}
                   >
                     Validated
@@ -438,10 +438,10 @@ export default function PipelineSection() {
 
                   <button
                     onClick={() => setActiveTabDedupe('raw')}
-                    className={`px-3 py-1 rounded-md transition-all ${
+                    className={`px-3 py-1 rounded-full transition-all text-xs font-semibold ${
                       activeTabDedupe === 'raw'
-                        ? 'bg-sky-600 text-white shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? 'glass-tab-active'
+                        : 'text-slate-400 hover:text-white'
                     }`}
                   >
                     Raw
@@ -579,17 +579,17 @@ export default function PipelineSection() {
               <span>Temporal Aggregation</span>
             </div>
 
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight drop-shadow-sm">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight drop-shadow-sm">
               Standardizing Advance Booking Windows
             </h2>
 
-            <p className="text-slate-800 text-base leading-relaxed font-medium">
+            <p className="text-slate-300 text-base leading-relaxed font-medium">
               Airfare depends strongly on how far in advance a ticket is
               observed. AeroStat stratifies observations across 5 advance
               booking windows: T+1, T+7, T+15, T+30, and T+45.
             </p>
 
-            <p className="text-slate-700 text-sm leading-relaxed font-medium">
+            <p className="text-slate-400 text-sm leading-relaxed font-medium">
               Sampling across multiple lead-time horizons isolates dynamic yield management curves from macro inflation signals.
             </p>
 
@@ -598,11 +598,11 @@ export default function PipelineSection() {
 
           <div className="lg:col-span-6">
 
-            <div className="light-section-card p-6 rounded-2xl border border-sky-200 shadow-xl bg-white">
+            <div className="glass-elevated p-6 rounded-2xl">
 
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center justify-between pb-3 border-b border-white/10">
 
-                <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                <span className="text-xs font-bold text-white uppercase tracking-wider">
                   Active Booking Horizons (5 Windows)
                 </span>
 
@@ -628,8 +628,8 @@ export default function PipelineSection() {
                     onClick={() => setSelectedWindow(item.id)}
                     className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                       selectedWindow === item.id
-                        ? 'bg-sky-600 text-white border-sky-600 shadow-md scale-[1.02]'
-                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-sky-50'
+                        ? 'glass-tab-active border-sky-500/50'
+                        : 'glass-soft border-transparent hover:border-white/10'
                     }`}
                   >
 
@@ -638,12 +638,12 @@ export default function PipelineSection() {
                       <Clock
                         className={`w-3.5 h-3.5 ${
                           selectedWindow === item.id
-                            ? 'text-white'
-                            : 'text-sky-600'
+                            ? 'text-sky-400'
+                            : 'text-slate-400'
                         }`}
                       />
 
-                      <span className="text-xs font-bold">
+                      <span className={`text-xs font-bold ${selectedWindow === item.id ? 'text-white' : 'text-slate-300'}`}>
                         {item.id}
                       </span>
 
@@ -652,7 +652,7 @@ export default function PipelineSection() {
                     <span
                       className={`text-[10px] block mt-1 ${
                         selectedWindow === item.id
-                          ? 'text-sky-100'
+                          ? 'text-sky-200'
                           : 'text-slate-500'
                       }`}
                     >
@@ -666,21 +666,21 @@ export default function PipelineSection() {
               </div>
 
 
-              <div className="mt-4 p-3.5 rounded-xl bg-sky-50/80 border border-sky-200 text-xs text-slate-700 flex items-center justify-between">
+              <div className="mt-4 p-3.5 rounded-xl glass-soft text-xs text-slate-300 flex items-center justify-between">
 
                 <div>
 
-                  <span className="font-semibold text-slate-900 block">
+                  <span className="font-semibold text-white block">
                     Selected Window
                   </span>
 
-                  <span className="text-slate-500">
+                  <span className="text-slate-400">
                     Used by the current scraper
                   </span>
 
                 </div>
 
-                <span className="font-mono font-bold text-sky-700 px-2 py-1 bg-white rounded border border-sky-300">
+                <span className="font-mono font-bold text-sky-400 px-2 py-1 glass-soft rounded">
                   {selectedWindow}
                 </span>
 
@@ -704,9 +704,9 @@ export default function PipelineSection() {
 
           <div className="lg:col-span-6 order-2 lg:order-1">
 
-            <div className="p-6 rounded-2xl glass-panel border border-sky-500/30 shadow-2xl text-slate-100 space-y-5">
+            <div className="p-6 rounded-2xl glass-elevated text-slate-100 space-y-5">
 
-              <div className="flex items-center justify-between pb-3 border-b border-slate-700/60">
+              <div className="flex items-center justify-between pb-3 border-b border-white/10">
 
                 <span className="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
                   <Sliders className="w-4 h-4 text-sky-400" />
@@ -855,17 +855,17 @@ export default function PipelineSection() {
               <span>Index Methodology</span>
             </div>
 
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight drop-shadow-sm">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight drop-shadow-sm">
               Multilateral GEKS for Airfare Price Measurement
             </h2>
 
-            <p className="text-slate-800 text-base leading-relaxed font-medium">
+            <p className="text-slate-300 text-base leading-relaxed font-medium">
               The planned AeroStat methodology uses a multilateral GEKS
               framework to reduce chain drift and improve transitivity
               when comparing prices across multiple periods.
             </p>
 
-            <p className="text-slate-700 text-sm leading-relaxed font-medium">
+            <p className="text-slate-400 text-sm leading-relaxed font-medium">
               The current backend is still in the data-acquisition and
               basic index stage. The production GEKS calculation will be
               connected to the statistical/index layer after the scraper
@@ -893,17 +893,17 @@ export default function PipelineSection() {
               <span>MoSPI Comparison</span>
             </div>
 
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight drop-shadow-sm">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight drop-shadow-sm">
               Comparing the Airfare Signal with Official CPI Data
             </h2>
 
-            <p className="text-slate-800 text-base leading-relaxed font-medium">
+            <p className="text-slate-300 text-base leading-relaxed font-medium">
               AeroStat is intended to provide a higher-frequency airfare
               signal that can eventually be compared with official
               MoSPI CPI transport statistics.
             </p>
 
-            <p className="text-slate-700 text-sm leading-relaxed font-medium">
+            <p className="text-slate-400 text-sm leading-relaxed font-medium">
               MoSPI CPI data is published at a different frequency and
               geographic/statistical level, so the final comparison
               requires compatible aggregation and calibration.
@@ -914,15 +914,15 @@ export default function PipelineSection() {
 
           <div className="lg:col-span-6">
 
-            <div className="light-section-card p-6 rounded-2xl border border-sky-200 shadow-xl bg-white space-y-4">
+            <div className="glass-elevated p-6 rounded-2xl space-y-4">
 
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center justify-between pb-3 border-b border-white/10">
 
-                <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                <span className="text-xs font-bold text-white uppercase tracking-wider">
                   Comparison Layer
                 </span>
 
-                <span className="text-xs font-semibold text-slate-500 font-mono">
+                <span className="text-xs font-semibold text-slate-400 font-mono">
                   Planned
                 </span>
 
@@ -931,21 +931,21 @@ export default function PipelineSection() {
 
               <div className="space-y-3">
 
-                <div className="p-4 rounded-xl bg-sky-50 border border-sky-200">
+                <div className="p-4 rounded-xl glass-soft">
 
                   <div className="flex items-center gap-3">
 
-                    <div className="w-9 h-9 rounded-lg bg-sky-100 flex items-center justify-center">
-                      <BarChart3 className="w-4 h-4 text-sky-600" />
+                    <div className="w-9 h-9 rounded-lg glass-soft flex items-center justify-center">
+                      <BarChart3 className="w-4 h-4 text-sky-400" />
                     </div>
 
                     <div>
 
-                      <span className="text-xs font-bold text-slate-900 block">
+                      <span className="text-xs font-bold text-white block">
                         AeroStat Airfare Observations
                       </span>
 
-                      <span className="text-[11px] text-slate-500">
+                      <span className="text-[11px] text-slate-400">
                         High-frequency route-level data
                       </span>
 
@@ -961,21 +961,21 @@ export default function PipelineSection() {
                 </div>
 
 
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <div className="p-4 rounded-xl glass-soft">
 
                   <div className="flex items-center gap-3">
 
-                    <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
-                      <LineChart className="w-4 h-4 text-blue-600" />
+                    <div className="w-9 h-9 rounded-lg glass-soft flex items-center justify-center">
+                      <LineChart className="w-4 h-4 text-blue-400" />
                     </div>
 
                     <div>
 
-                      <span className="text-xs font-bold text-slate-900 block">
+                      <span className="text-xs font-bold text-white block">
                         MoSPI CPI Transport
                       </span>
 
-                      <span className="text-[11px] text-slate-500">
+                      <span className="text-[11px] text-slate-400">
                         Official lower-frequency benchmark
                       </span>
 
@@ -988,11 +988,11 @@ export default function PipelineSection() {
               </div>
 
 
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 font-medium">
+              <div className="p-3 rounded-xl glass-soft text-xs text-slate-300 font-medium">
 
                 <div className="flex items-start gap-2">
 
-                  <Plane className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
+                  <Plane className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
 
                   <span>
                     The final comparison will be added after the

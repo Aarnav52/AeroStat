@@ -30,14 +30,14 @@ export default function Sidebar({ activeView, setActiveView }) {
   };
 
   return (
-    <aside className="w-16 lg:w-60 bg-slate-950/95 backdrop-blur-xl border-r border-slate-800/80 flex flex-col justify-between fixed top-0 left-0 bottom-0 z-50 transition-all duration-300 shadow-2xl">
+    <aside className="w-16 lg:w-60 glass-strong flex flex-col justify-between fixed top-0 left-0 bottom-0 z-50 transition-all duration-300">
       {/* Top Brand Header */}
       <div>
         <div
           onClick={() => handleNavClick('landing')}
-          className="p-4 lg:px-5 lg:py-4 flex items-center space-x-3 border-b border-slate-800/80 cursor-pointer group"
+          className="p-4 lg:px-5 lg:py-4 flex items-center space-x-3 border-b border-slate-800/50 cursor-pointer group"
         >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-blue-600 flex items-center justify-center shadow-lg shadow-sky-500/20 text-white font-bold shrink-0 transform transition group-hover:scale-105">
+          <div className="w-9 h-9 rounded-xl glass-soft flex items-center justify-center text-white font-bold shrink-0 transform transition group-hover:scale-105">
             <Plane className="w-5 h-5 stroke-[2.5]" />
           </div>
           <div className="hidden lg:block overflow-hidden">
@@ -58,23 +58,18 @@ export default function Sidebar({ activeView, setActiveView }) {
                 key={item.id}
                 onClick={() => handleNavClick(item.id)}
                 className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all relative group cursor-pointer ${isActive
-                    ? 'bg-sky-500/15 text-sky-400 border border-sky-500/30 shadow-sm shadow-sky-500/10'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/80'
+                    ? 'glass-tab-active'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
                   }`}
                 title={item.label}
               >
-                {/* Glowing left accent line for active item */}
-                {isActive && (
-                  <span className="absolute left-0 top-2 bottom-2 w-1 bg-sky-400 rounded-r-full shadow-glow" />
-                )}
-
                 <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-sky-400' : 'text-slate-400 group-hover:text-slate-200'}`} />
                 <span className="hidden lg:inline truncate">{item.label}</span>
 
                 {item.badge && (
-                  <span className={`hidden lg:inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold border ml-auto font-mono ${item.badge === 'LIVE'
-                      ? 'bg-sky-500/20 text-sky-300 border-sky-400/30'
-                      : 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30'
+                  <span className={`hidden lg:inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold ml-auto font-mono ${item.badge === 'LIVE'
+                      ? 'glass-soft text-sky-300'
+                      : 'glass-soft text-emerald-300'
                     }`}>
                     {item.badge}
                   </span>
