@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import routes, flights, index
+from app.api import routes, flights, index, analyst
 
 app = FastAPI(title="Airfare Price Index API")
 
@@ -20,6 +20,8 @@ def health_check():
 app.include_router(routes.router, prefix="/routes", tags=["Routes"])
 app.include_router(flights.router, prefix="/flights", tags=["Flights"])
 app.include_router(index.router, prefix="/index", tags=["Index"])
+app.include_router(analyst.router, prefix="/analyst", tags=["Analyst"])
+
 
 if __name__ == "__main__":
     import uvicorn
