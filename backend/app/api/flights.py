@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 from pydantic import BaseModel
 from typing import List, Optional
 from app.db.connection import get_db_connection
@@ -74,26 +74,33 @@ def get_flights(
         
     return results
 
+def _run_pipeline_background():
+    try:
+        from app.services.pipeline_service import pipeline_service
+        pipeline_service.run_full_pipeline()
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Failed to run pipeline after scrape: {e}")
+
+
 @router.post("/scrape")
-def trigger_scrape(req: ScrapeRequest):
+def trigger_scrape(req: ScrapeRequest, background_tasks: BackgroundTasks):
     """
     Triggers the scraping service.
     """
     if not req.windows:
         raise HTTPException(status_code=400, detail="Must provide at least one window")
-        
+
     try:
         result = scraping_service.run_scrape(req.origin, req.destination, req.windows)
-        
-        # Trigger pipeline automatically to update Route Analytics (index_values)
+
+        # Update Route Analytics (index_values) in the background - the full
+        # cleaning + Jevons pipeline takes 60-90s+, and running it inline here
+        # held the HTTP response open that whole time, which looked like a
+        # hung/failed request from the UI (manual scrape trigger timing out).
         if result.get("status") in ["success", "partial_failure"]:
-            try:
-                from app.services.pipeline_service import pipeline_service
-                pipeline_service.run_full_pipeline()
-            except Exception as e:
-                import logging
-                logging.getLogger(__name__).error(f"Failed to run pipeline after scrape: {e}")
-        
+            background_tasks.add_task(_run_pipeline_background)
+
         # If the overall status is failed, we can still return 200 with failure details 
         # or 500 depending on preference. We'll return 200 with details for visibility.
         return result
