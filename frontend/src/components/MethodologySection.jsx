@@ -319,9 +319,9 @@ export default function MethodologySection() {
           {[
             { id: 'T+1', label: 'T+1 (Tomorrow)', status: 'LIVE', desc: 'Last-minute surge fare', active: true },
             { id: 'T+7', label: 'T+7 (1 Week)', status: 'LIVE', desc: 'Short-term leisure & business', active: true },
-            { id: 'T+15', label: 'T+15 (15 Days)', status: 'DEFINED', desc: 'Mid-window advance horizon', active: false },
+            { id: 'T+15', label: 'T+15 (15 Days)', status: 'LIVE', desc: 'Mid-window advance horizon', active: true },
             { id: 'T+30', label: 'T+30 (1 Month)', status: 'LIVE', desc: 'Standard advance booking', active: true },
-            { id: 'T+45', label: 'T+45 (45 Days)', status: 'DEFINED', desc: 'Long-range seasonal planning', active: false },
+            { id: 'T+45', label: 'T+45 (45 Days)', status: 'LIVE', desc: 'Long-range seasonal planning', active: true },
           ].map((item) => (
             <div 
               key={item.id}
