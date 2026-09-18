@@ -12,7 +12,6 @@ import {
   Activity,
   BookOpen
 } from 'lucide-react';
-import NetworkStatusIndicator from './NetworkStatusIndicator';
 
 export default function Sidebar({ activeView, setActiveView }) {
   const navItems = [
@@ -91,7 +90,10 @@ export default function Sidebar({ activeView, setActiveView }) {
         </button>
 
         <div className="hidden lg:flex items-center justify-between px-1">
-          <NetworkStatusIndicator />
+          <div className="flex items-center space-x-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="font-semibold text-slate-300 font-mono text-[11px]">System Live</span>
+          </div>
           <div className="text-[9px] text-slate-500 font-mono text-right leading-tight">
             <div>v2.4 (IST)</div>
             <div>MoSPI / DGCA</div>

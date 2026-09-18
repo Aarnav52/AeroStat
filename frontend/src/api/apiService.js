@@ -4,45 +4,12 @@
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 async function apiFetch(path, options = {}) {
-  const cacheKey = `aerostat_cache_${path}`;
-  
-  try {
-    const res = await fetch(`${API_BASE}${path}`, options);
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: 'Unknown error' }));
-      throw new Error(err.detail || `HTTP ${res.status}`);
-    }
-    const data = await res.json();
-    
-    // Only cache GET requests that are successful
-    if (!options.method || options.method === 'GET') {
-      try {
-        localStorage.setItem(cacheKey, JSON.stringify({
-          data,
-          _cached_at: new Date().toISOString()
-        }));
-      } catch (e) {
-        // Ignore localStorage quota errors
-      }
-    }
-    return data;
-  } catch (error) {
-    // On network failure, try to serve from cache
-    if (!options.method || options.method === 'GET') {
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        console.warn(`[Network Failure] Serving ${path} from cache`);
-        const parsed = JSON.parse(cached);
-        // Inject the cached timestamp so the frontend can detect staleness
-        return {
-          ...parsed.data,
-          _is_cached: true,
-          _cached_at: parsed._cached_at
-        };
-      }
-    }
-    throw error;
+  const res = await fetch(`${API_BASE}${path}`, options);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Unknown error' }));
+    throw new Error(err.detail || `HTTP ${res.status}`);
   }
+  return res.json();
 }
 
 // GET /health

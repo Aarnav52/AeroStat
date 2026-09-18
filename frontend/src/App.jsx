@@ -7,7 +7,6 @@ import PipelineSection from './components/PipelineSection';
 import Dashboard from './components/Dashboard';
 import MethodologySection from './components/MethodologySection';
 import VantaClouds from './components/VantaClouds';
-import NetworkStatusIndicator from './components/NetworkStatusIndicator';
 
 export default function App() {
   // Always start on Landing / Preview Page first

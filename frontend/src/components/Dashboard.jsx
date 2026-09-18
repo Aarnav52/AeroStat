@@ -12,7 +12,6 @@ import {
 import { fetchIndex, fetchFlights } from '../api/apiService';
 import AirlineAnalytics from './AirlineAnalytics';
 import LiveDataPanel from './LiveDataPanel';
-import NetworkStatusIndicator from './NetworkStatusIndicator';
 
 // Scrapes land every ~6h (T+1) / daily (T+30) via the scheduled sweeps;
 // poll every 3 minutes so newly-inserted rows show up without a manual
@@ -316,8 +315,6 @@ export default function Dashboard({ initialTab = 'macro' }) {
               <h2 className="text-2xl sm:text-3xl font-extrabold text-white font-sans tracking-tight">
                 AeroStat Real-Time Intelligence Dashboard
               </h2>
-
-              <NetworkStatusIndicator />
 
               {dashboardTab === 'macro' && realIndexData.length === 0 && (
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30">

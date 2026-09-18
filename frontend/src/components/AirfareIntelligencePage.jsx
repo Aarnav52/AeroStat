@@ -170,8 +170,8 @@ export default function AirfareIntelligencePage() {
             </h1>
             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold font-mono border ${freshness.bg} ${freshness.color}`}>
               {freshness.label === 'LIVE' && <span className={`w-2 h-2 rounded-full mr-1.5 animate-pulse bg-emerald-400`} />}
-              {freshness.label !== 'LIVE' && <span className={`w-2 h-2 rounded-full mr-1.5 ${isCached ? 'bg-amber-400' : 'bg-rose-400'}`} />}
-              {isCached ? 'OFFLINE CACHE' : 'LIVE TELEMETRY'}
+              {freshness.label !== 'LIVE' && <span className={`w-2 h-2 rounded-full mr-1.5 bg-rose-400`} />}
+              LIVE TELEMETRY
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
