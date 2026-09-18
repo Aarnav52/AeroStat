@@ -99,75 +99,75 @@ class ScrapingService:
         destination_city = self.city_lookup.get(destination, "Unknown")
 
         try:
-            conn = get_db_connection()
-            # Attempt to retry pending items before starting new scrapes
-            self.retry_pending_queue(conn)
+            with get_db_connection() as conn:
+                # Attempt to retry pending items before starting new scrapes
+                self.retry_pending_queue(conn)
+
+                source_id = get_or_create_source(conn, "Google Flights SerpApi", "api")
+                route_id = get_or_create_route(conn, origin, destination, origin_city, destination_city)
+                
+                for window in windows:
+                    window_result = {
+                        "window": window,
+                        "target_date": None,
+                        "flights_found": 0,
+                        "rows_inserted": 0,
+                        "error": None
+                    }
+                    
+                    try:
+                        target_date = self.calculate_date_for_window(window)
+                        window_result["target_date"] = target_date
+                        
+                        logger.info(f"Starting scrape for {origin}-{destination} on {target_date} ({window})")
+                        
+                        api_response = serpapi_client.get_flights(origin, destination, target_date)
+                        
+                        if not api_response["success"]:
+                            logger.error(f"API Error (NETWORK/SOURCE) for {window}: {api_response['error']}")
+                            window_result["error"] = api_response["error"]
+                            results["status"] = "partial_failure"
+                            results["details"].append(window_result)
+                            continue
+                            
+                        observations = self.parser.parse_flights(api_response["data"], target_date, window)
+                        window_result["flights_found"] = len(observations)
+                        
+                        # 3. Database Insertion with Local Queue Fallback
+                        try:
+                            inserted, skipped = insert_observations(conn, observations, route_id, source_id)
+                            window_result["rows_inserted"] = inserted
+                            window_result["skipped_duplicates"] = skipped
+                            if inserted == 0 and skipped > 0:
+                                window_result["info"] = f"{skipped} flights already scraped today (database is up to date)"
+                        except Exception as db_err:
+                            logger.error(f"DATABASE_ERROR during insert for {window}: {db_err}")
+                            logger.error(traceback.format_exc())
+                            # Queue observations locally for retry
+                            queue = _load_pending_queue()
+                            queue.append({
+                                "timestamp": datetime.now(self.timezone).isoformat(),
+                                "route_id": route_id,
+                                "source_id": source_id,
+                                "window": window,
+                                "observations": observations
+                            })
+                            _save_pending_queue(queue)
+                            window_result["error"] = "DATABASE_ERROR_QUEUED"
+                            window_result["info"] = f"Queued {len(observations)} observations locally due to DB failure."
+                            results["status"] = "partial_failure"
+                        
+                    except Exception as e:
+                        logger.error(f"Unexpected error scraping {window}: {e}")
+                        window_result["error"] = str(e)
+                        results["status"] = "partial_failure"
+                        
+                    results["details"].append(window_result)
+                    
         except Exception as e:
             logger.error(f"Database connection failed entirely. Unable to proceed with normal scraping workflow: {e}")
             return {"status": "failed", "error": "DATABASE_ERROR", "message": "Supabase unreachable, aborting scrape"}
 
-        with conn:
-            source_id = get_or_create_source(conn, "Google Flights SerpApi", "api")
-            route_id = get_or_create_route(conn, origin, destination, origin_city, destination_city)
-            
-            for window in windows:
-                window_result = {
-                    "window": window,
-                    "target_date": None,
-                    "flights_found": 0,
-                    "rows_inserted": 0,
-                    "error": None
-                }
-                
-                try:
-                    target_date = self.calculate_date_for_window(window)
-                    window_result["target_date"] = target_date
-                    
-                    logger.info(f"Starting scrape for {origin}-{destination} on {target_date} ({window})")
-                    
-                    api_response = serpapi_client.get_flights(origin, destination, target_date)
-                    
-                    if not api_response["success"]:
-                        logger.error(f"API Error (NETWORK/SOURCE) for {window}: {api_response['error']}")
-                        window_result["error"] = api_response["error"]
-                        results["status"] = "partial_failure"
-                        results["details"].append(window_result)
-                        continue
-                        
-                    observations = self.parser.parse_flights(api_response["data"], target_date, window)
-                    window_result["flights_found"] = len(observations)
-                    
-                    # 3. Database Insertion with Local Queue Fallback
-                    try:
-                        inserted, skipped = insert_observations(conn, observations, route_id, source_id)
-                        window_result["rows_inserted"] = inserted
-                        window_result["skipped_duplicates"] = skipped
-                        if inserted == 0 and skipped > 0:
-                            window_result["info"] = f"{skipped} flights already scraped today (database is up to date)"
-                    except Exception as db_err:
-                        logger.error(f"DATABASE_ERROR during insert for {window}: {db_err}")
-                        logger.error(traceback.format_exc())
-                        # Queue observations locally for retry
-                        queue = _load_pending_queue()
-                        queue.append({
-                            "timestamp": datetime.now(self.timezone).isoformat(),
-                            "route_id": route_id,
-                            "source_id": source_id,
-                            "window": window,
-                            "observations": observations
-                        })
-                        _save_pending_queue(queue)
-                        window_result["error"] = "DATABASE_ERROR_QUEUED"
-                        window_result["info"] = f"Queued {len(observations)} observations locally due to DB failure."
-                        results["status"] = "partial_failure"
-                    
-                except Exception as e:
-                    logger.error(f"Unexpected error scraping {window}: {e}")
-                    window_result["error"] = str(e)
-                    results["status"] = "partial_failure"
-                    
-                results["details"].append(window_result)
-                
         if all(w.get("error") for w in results["details"]):
             results["status"] = "failed"
             
