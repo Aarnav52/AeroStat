@@ -1,17 +1,18 @@
 import React from 'react';
-import { 
-  Plane, 
-  Sparkles, 
-  Map, 
-  BarChart3, 
-  Layers, 
-  Clock, 
-  Calculator, 
-  Database, 
-  FileText, 
+import {
+  Plane,
+  Sparkles,
+  Map,
+  BarChart3,
+  Layers,
+  Clock,
+  Calculator,
+  Database,
+  FileText,
   Activity,
   BookOpen
 } from 'lucide-react';
+import NetworkStatusIndicator from './NetworkStatusIndicator';
 
 export default function Sidebar({ activeView, setActiveView }) {
   const navItems = [
@@ -32,7 +33,7 @@ export default function Sidebar({ activeView, setActiveView }) {
     <aside className="w-16 lg:w-60 bg-slate-950/95 backdrop-blur-xl border-r border-slate-800/80 flex flex-col justify-between fixed top-0 left-0 bottom-0 z-50 transition-all duration-300 shadow-2xl">
       {/* Top Brand Header */}
       <div>
-        <div 
+        <div
           onClick={() => handleNavClick('landing')}
           className="p-4 lg:px-5 lg:py-4 flex items-center space-x-3 border-b border-slate-800/80 cursor-pointer group"
         >
@@ -56,27 +57,25 @@ export default function Sidebar({ activeView, setActiveView }) {
               <button
                 key={item.id}
                 onClick={() => handleNavClick(item.id)}
-                className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all relative group cursor-pointer ${
-                  isActive
+                className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all relative group cursor-pointer ${isActive
                     ? 'bg-sky-500/15 text-sky-400 border border-sky-500/30 shadow-sm shadow-sky-500/10'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/80'
-                }`}
+                  }`}
                 title={item.label}
               >
                 {/* Glowing left accent line for active item */}
                 {isActive && (
                   <span className="absolute left-0 top-2 bottom-2 w-1 bg-sky-400 rounded-r-full shadow-glow" />
                 )}
-                
+
                 <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-sky-400' : 'text-slate-400 group-hover:text-slate-200'}`} />
                 <span className="hidden lg:inline truncate">{item.label}</span>
-                
+
                 {item.badge && (
-                  <span className={`hidden lg:inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold border ml-auto font-mono ${
-                    item.badge === 'LIVE' 
+                  <span className={`hidden lg:inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold border ml-auto font-mono ${item.badge === 'LIVE'
                       ? 'bg-sky-500/20 text-sky-300 border-sky-400/30'
                       : 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30'
-                  }`}>
+                    }`}>
                     {item.badge}
                   </span>
                 )}
@@ -86,19 +85,21 @@ export default function Sidebar({ activeView, setActiveView }) {
         </nav>
       </div>
 
-      {/* Bottom System Status */}
-      <div className="p-3 border-t border-slate-800/80 bg-slate-950/60">
-        <div className="hidden lg:flex items-center justify-between p-2 rounded-xl bg-slate-900/60 border border-slate-800 text-[11px] mb-2">
-          <div className="flex items-center space-x-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="font-semibold text-slate-300 font-mono">System Live</span>
-          </div>
-          <span className="text-[10px] text-slate-500 font-mono">IST</span>
-        </div>
+      {/* Bottom System Status & Navigation */}
+      <div className="p-4 border-t border-slate-800/50 bg-transparent flex flex-col space-y-3">
+        <button
+          onClick={() => handleNavClick('landing')}
+          className="hidden lg:flex items-center justify-center space-x-2 w-full px-3 py-2 rounded-xl bg-slate-900/40 hover:bg-slate-800/60 border border-slate-700/50 text-slate-300 text-xs font-semibold transition-all cursor-pointer shadow-sm group backdrop-blur-md"
+        >
+          <span className="group-hover:-translate-x-1 transition-transform">←</span>
+          <span>Return to Landing</span>
+        </button>
 
-        <div className="flex items-center justify-between text-slate-400 text-xs px-1">
-          <div className="hidden lg:block text-[10px] text-slate-500 font-mono">
-            v2.4 • MoSPI & DGCA Calibrated
+        <div className="hidden lg:flex items-center justify-between px-1">
+          <NetworkStatusIndicator />
+          <div className="text-[9px] text-slate-500 font-mono text-right leading-tight">
+            <div>v2.4 (IST)</div>
+            <div>MoSPI / DGCA</div>
           </div>
         </div>
       </div>

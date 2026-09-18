@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { Plane, Eye, Activity, ShieldAlert, ArrowUpRight } from 'lucide-react';
 
-// Accurate SVG coordinate mappings for Indian Aviation Nodes (800x850 viewport)
+import IndiaMap from '@svg-maps/india';
+
+// Accurate SVG coordinate mappings for Indian Aviation Nodes on the 612x696 India Map Projection
 export const AIRPORT_NODES = {
-  DEL: { code: 'DEL', name: 'Delhi', full: 'Indira Gandhi Intl', x: 380, y: 220 },
-  BOM: { code: 'BOM', name: 'Mumbai', full: 'Chhatrapati Shivaji Maharaj', x: 260, y: 500 },
-  BLR: { code: 'BLR', name: 'Bengaluru', full: 'Kempegowda Intl', x: 360, y: 690 },
-  HYD: { code: 'HYD', name: 'Hyderabad', full: 'Rajiv Gandhi Intl', x: 420, y: 540 },
-  CCU: { code: 'CCU', name: 'Kolkata', full: 'Netaji Subhash Chandra Bose', x: 700, y: 390 },
-  MAA: { code: 'MAA', name: 'Chennai', full: 'Chennai Intl', x: 460, y: 710 },
-  AMD: { code: 'AMD', name: 'Ahmedabad', full: 'Sardar Vallabhbhai Patel', x: 240, y: 390 },
+  DEL: { code: 'DEL', name: 'Delhi', full: 'Indira Gandhi Intl', x: 189, y: 207 },
+  BOM: { code: 'BOM', name: 'Mumbai', full: 'Chhatrapati Shivaji Maharaj', x: 101, y: 427 },
+  BLR: { code: 'BLR', name: 'Bengaluru', full: 'Kempegowda Intl', x: 201, y: 564 },
+  HYD: { code: 'HYD', name: 'Hyderabad', full: 'Rajiv Gandhi Intl', x: 216, y: 470 },
+  CCU: { code: 'CCU', name: 'Kolkata', full: 'Netaji Subhash Chandra Bose', x: 424, y: 344 },
+  MAA: { code: 'MAA', name: 'Chennai', full: 'Chennai Intl', x: 252, y: 569 },
+  AMD: { code: 'AMD', name: 'Ahmedabad', full: 'Sardar Vallabhbhai Patel', x: 96, y: 335 },
 };
 
 // Real DGCA Monthly Passenger Volumes (Statutory Data)
@@ -98,6 +100,16 @@ export default function IndiaAviationMap({
     });
   };
 
+  const zoomStyle = hoveredRoute ? {
+    transform: `scale(1.2)`,
+    transformOrigin: `${hoveredRoute.midX}px ${hoveredRoute.midY}px`,
+    transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
+  } : {
+    transform: 'scale(1)',
+    transformOrigin: 'center center',
+    transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
+  };
+
   return (
     <div className="relative w-full h-[520px] sm:h-[600px] glass-panel rounded-3xl border border-slate-800/90 overflow-hidden bg-slate-950/80 shadow-2xl flex items-center justify-center p-2">
       
@@ -108,7 +120,7 @@ export default function IndiaAviationMap({
       {/* SVG Canvas for India Map & Flight Corridors */}
       <svg
         className="w-full h-full max-w-[850px] max-h-[620px] cursor-crosshair select-none"
-        viewBox="0 0 850 820"
+        viewBox="0 0 612 696"
         onMouseMove={handleMouseMove}
       >
         <defs>
@@ -123,7 +135,18 @@ export default function IndiaAviationMap({
           </filter>
         </defs>
 
-        {/* 1. Curved Flight Corridors */}
+        <g style={zoomStyle}>
+          {/* Base Map of India */}
+          {IndiaMap.locations.map((location) => (
+            <path
+              key={location.id}
+              id={location.id}
+              d={location.path}
+              className="fill-slate-900/60 stroke-slate-800/80 stroke-[1.5px] hover:fill-slate-800 transition-colors"
+            />
+          ))}
+
+          {/* 1. Curved Flight Corridors */}
         {ROUTE_CONFIGS.map((config) => {
           const fromNode = AIRPORT_NODES[config.from];
           const toNode = AIRPORT_NODES[config.to];
@@ -150,7 +173,7 @@ export default function IndiaAviationMap({
                 />
               )}
 
-              {/* Main Flight Path */}
+              {/* Main Flight Path (Visual Only) */}
               <path
                 d={pathInfo.d}
                 fill="none"
@@ -159,10 +182,7 @@ export default function IndiaAviationMap({
                 strokeOpacity={isSelected ? 1.0 : isHovered ? 0.9 : 0.75}
                 strokeDasharray={mapMode === 'shock' ? '8 4' : 'none'}
                 strokeLinecap="round"
-                className="cursor-pointer transition-all duration-300"
-                onClick={() => onSelectRoute(config.id)}
-                onMouseEnter={() => setHoveredRoute({ ...config, ...pathInfo, metrics })}
-                onMouseLeave={() => setHoveredRoute(null)}
+                className="transition-all duration-300 pointer-events-none"
               />
 
               {/* Dynamic Animated Flight Pulse along active routes */}
@@ -185,25 +205,25 @@ export default function IndiaAviationMap({
 
           return (
             <g key={node.code} transform={`translate(${node.x}, ${node.y})`}>
-              {/* Outer pulsing ring */}
+              {/* Outer glow for selected node */}
               <circle
-                r="14"
+                r="18"
                 fill="url(#nodeGlow)"
-                className="animate-ping opacity-30"
+                className={`transition-opacity duration-500 ${isSelectedNode ? 'opacity-100' : 'opacity-0'}`}
               />
               
-              {/* Outer border ring */}
+              {/* Node base */}
               <circle
-                r="7"
-                fill="#020617"
-                stroke={isSelectedNode ? '#38bdf8' : '#64748b'}
+                r="6.5"
+                fill={isSelectedNode ? '#0284c7' : '#0f172a'}
+                stroke={isSelectedNode ? '#38bdf8' : '#334155'}
                 strokeWidth={isSelectedNode ? '2.5' : '1.5'}
               />
 
               {/* Inner core node */}
               <circle
                 r="3.5"
-                fill={isSelectedNode ? '#38bdf8' : '#ffffff'}
+                fill={isSelectedNode ? '#ffffff' : '#94a3b8'}
               />
 
               {/* City & IATA Label */}
@@ -221,49 +241,79 @@ export default function IndiaAviationMap({
             </g>
           );
         })}
+        </g>
+
+        {/* 3. Static Hit Targets (Invisible) to prevent hover jitter */}
+        <g className="hit-targets">
+          {ROUTE_CONFIGS.map((config) => {
+            const fromNode = AIRPORT_NODES[config.from];
+            const toNode = AIRPORT_NODES[config.to];
+            if (!fromNode || !toNode) return null;
+
+            const pathInfo = createCurvedPath(fromNode, toNode, config.curveOffset);
+            const metrics = routeMetricsMap[config.id] || {};
+
+            return (
+              <path
+                key={`hit-${config.id}`}
+                d={pathInfo.d}
+                fill="none"
+                stroke="transparent"
+                strokeWidth="20"
+                strokeLinecap="round"
+                className="cursor-pointer"
+                onClick={() => onSelectRoute(config.id)}
+                onMouseEnter={() => setHoveredRoute({ ...config, ...pathInfo, metrics })}
+                onMouseLeave={() => setHoveredRoute(null)}
+              />
+            );
+          })}
+        </g>
       </svg>
 
       {/* Floating Hover Tooltip */}
       {hoveredRoute && (
         <div
-          className="absolute pointer-events-none z-30 p-3 rounded-2xl bg-slate-900/95 border border-sky-500/40 shadow-2xl backdrop-blur-md text-xs space-y-1.5 w-56 font-sans"
+          className="absolute pointer-events-none z-30 p-4 rounded-2xl bg-slate-900/95 border border-sky-500/40 shadow-2xl backdrop-blur-md text-xs w-64 font-sans"
           style={{
-            left: Math.min(tooltipPos.x + 15, 600),
+            left: Math.min(tooltipPos.x + 15, 580),
             top: Math.max(tooltipPos.y - 40, 20),
           }}
         >
-          <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
             <span className="font-extrabold text-white font-mono">{hoveredRoute.id}</span>
             <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30">
-              {selectedWindow}
+              ALL WINDOWS
             </span>
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-slate-400">Airfare Index:</span>
-            <span className="font-mono font-bold text-sky-400">
-              {hoveredRoute.metrics?.indexValue ?? 100.0}
-            </span>
+          <div className="space-y-2 mb-3">
+            {['T+1', 'T+7', 'T+15', 'T+30', 'T+45'].map((win) => {
+              const winData = hoveredRoute.metrics?.summaryMetrics?.[win];
+              if (!winData) return null;
+              
+              const isHigh = winData.indexValue > 105;
+              
+              return (
+                <div key={win} className="flex items-center justify-between">
+                  <span className="text-slate-400 font-mono w-10">{win}</span>
+                  <div className="flex gap-2">
+                    <span className="text-slate-400">
+                      ₹{winData.avgPrice ? winData.avgPrice.toLocaleString('en-IN') : 'N/A'}
+                    </span>
+                    <span className={`font-mono font-bold w-12 text-right ${isHigh ? 'text-rose-400' : 'text-sky-400'}`}>
+                      {winData.indexValue.toFixed(1)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-slate-400">Current Avg Fare:</span>
-            <span className="font-mono font-bold text-white">
-              {hoveredRoute.metrics?.avgPrice ? `₹${hoveredRoute.metrics.avgPrice.toLocaleString('en-IN')}` : 'N/A'}
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between pt-1 border-t border-slate-800/60 text-[10px]">
+          <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 text-[10px]">
             <span className="text-slate-500">DGCA Monthly Pax:</span>
             <span className="font-mono text-slate-300">
               {hoveredRoute.dgcaPax ? `${(hoveredRoute.dgcaPax / 1000).toFixed(1)}k/mo` : 'N/A'}
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between text-[10px]">
-            <span className="text-slate-500">Observations:</span>
-            <span className="font-mono text-emerald-400">
-              {hoveredRoute.metrics?.obsCount ?? 'N/A'}
             </span>
           </div>
         </div>

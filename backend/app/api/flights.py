@@ -41,7 +41,7 @@ def get_flights(
         query += " AND f.advance_booking_window = %s"
         params.append(window)
         
-    query += " ORDER BY f.departure_date ASC, f.raw_price_displayed ASC"
+    query += " ORDER BY f.scrape_timestamp DESC, f.departure_date ASC"
     if limit:
         query += f" LIMIT {int(limit)}"
 
@@ -84,6 +84,15 @@ def trigger_scrape(req: ScrapeRequest):
         
     try:
         result = scraping_service.run_scrape(req.origin, req.destination, req.windows)
+        
+        # Trigger pipeline automatically to update Route Analytics (index_values)
+        if result.get("status") in ["success", "partial_failure"]:
+            try:
+                from app.services.pipeline_service import pipeline_service
+                pipeline_service.run_full_pipeline()
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Failed to run pipeline after scrape: {e}")
         
         # If the overall status is failed, we can still return 200 with failure details 
         # or 500 depending on preference. We'll return 200 with details for visibility.

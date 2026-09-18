@@ -15,27 +15,43 @@ import {
   Layers 
 } from 'lucide-react';
 import IndiaAviationMap, { ROUTE_CONFIGS, AIRPORT_NODES } from './IndiaAviationMap';
-import { fetchIndex, fetchFlights } from '../api/apiService';
+import { fetchIndexSummary, fetchFlights } from '../api/apiService';
 
 export default function AirfareIntelligencePage() {
   const [mapMode, setMapMode] = useState('pressure'); // 'pressure' | 'stress' | 'shock' | 'window'
   const [selectedWindow, setSelectedWindow] = useState('T+1'); // 'T+1' | 'T+7' | 'T+30'
   const [selectedRouteId, setSelectedRouteId] = useState('DEL-BOM');
-  const [lastUpdated, setLastUpdated] = useState('14:45 IST');
+  const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [isCached, setIsCached] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [routeDataMap, setRouteDataMap] = useState({});
+
+  // Freshness thresholds (minutes)
+  const getFreshnessStatus = (timestamp) => {
+    if (!timestamp) return { label: 'LIVE', color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/30' };
+    const diffMins = (new Date() - new Date(timestamp)) / 60000;
+    if (diffMins < 30) return { label: 'LIVE', color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/30' };
+    if (diffMins < 120) return { label: 'STALE', color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30' };
+    return { label: 'OUTDATED / OFFLINE', color: 'text-rose-400', bg: 'bg-rose-500/10 border-rose-500/30' };
+  };
 
   // Fetch real route data from backend for all corridors
   const loadRouteData = async () => {
     setIsRefreshing(true);
     const newMap = {};
+    let latestTimestamp = null;
+    let dataWasCached = false;
 
     await Promise.all(
       ROUTE_CONFIGS.map(async (config) => {
         try {
-          const indexRes = await fetchIndex(config.id, selectedWindow);
+          const summaryRes = await fetchIndexSummary(config.id);
+          const indexRes = summaryRes?.index?.[selectedWindow];
           const flightsRes = await fetchFlights(config.id, selectedWindow);
           
+          if (summaryRes?._is_cached) dataWasCached = true;
+          if (summaryRes?._cached_at) latestTimestamp = summaryRes._cached_at;
+
           const series = indexRes?.series || [];
           const lastPoint = series.length ? series[series.length - 1] : null;
           const prevPoint = series.length > 1 ? series[series.length - 2] : null;
@@ -48,6 +64,23 @@ export default function AirfareIntelligencePage() {
             ? ((lastPoint.index_value - prevPoint.index_value) / prevPoint.index_value * 100)
             : 0;
 
+          // Parse full summary for the tooltip
+          const summaryMetrics = {};
+          if (summaryRes?.index) {
+            Object.keys(summaryRes.index).forEach(win => {
+              const winSeries = summaryRes.index[win]?.series || [];
+              const wLast = winSeries.length ? winSeries[winSeries.length - 1] : null;
+              const wPrev = winSeries.length > 1 ? winSeries[winSeries.length - 2] : null;
+              summaryMetrics[win] = {
+                indexValue: wLast?.index_value ?? 100.0,
+                avgPrice: wLast?.avg_price ?? null,
+                dodChange: (wLast?.index_value && wPrev?.index_value) 
+                  ? ((wLast.index_value - wPrev.index_value) / wPrev.index_value * 100) 
+                  : 0
+              };
+            });
+          }
+
           newMap[config.id] = {
             id: config.id,
             from: config.from,
@@ -58,9 +91,10 @@ export default function AirfareIntelligencePage() {
             avgPrice: lastPoint?.avg_price ?? (prices.length ? Math.round(prices.reduce((a,b)=>a+b,0)/prices.length) : null),
             minPrice,
             maxPrice,
-            obsCount: flightsRes?.length ?? 0,
-            series,
+            obsCount: lastPoint?.num_observations_used ?? (flightsRes ? flightsRes.length : 0),
             dodChange: parseFloat(dodChange.toFixed(2)),
+            summaryMetrics,
+            series,
           };
         } catch (err) {
           // Fallback structure if backend has no data yet for this window
@@ -83,7 +117,8 @@ export default function AirfareIntelligencePage() {
     );
 
     setRouteDataMap(newMap);
-    setLastUpdated(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) + ' IST');
+    setLastUpdated(latestTimestamp ? new Date(latestTimestamp) : new Date());
+    setIsCached(dataWasCached);
     setIsRefreshing(false);
   };
 
@@ -121,6 +156,7 @@ export default function AirfareIntelligencePage() {
 
   const selectedFrom = AIRPORT_NODES[activeRouteData.from || 'DEL'] || AIRPORT_NODES.DEL;
   const selectedTo = AIRPORT_NODES[activeRouteData.to || 'BOM'] || AIRPORT_NODES.BOM;
+  const freshness = getFreshnessStatus(lastUpdated);
 
   return (
     <div className="p-4 lg:p-8 space-y-6 max-w-7xl mx-auto font-sans">
@@ -132,9 +168,10 @@ export default function AirfareIntelligencePage() {
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
               Airfare Intelligence Map
             </h1>
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 mr-1.5 animate-pulse" />
-              LIVE TELEMETRY
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold font-mono border ${freshness.bg} ${freshness.color}`}>
+              {freshness.label === 'LIVE' && <span className={`w-2 h-2 rounded-full mr-1.5 animate-pulse bg-emerald-400`} />}
+              {freshness.label !== 'LIVE' && <span className={`w-2 h-2 rounded-full mr-1.5 ${isCached ? 'bg-amber-400' : 'bg-rose-400'}`} />}
+              {isCached ? 'OFFLINE CACHE' : 'LIVE TELEMETRY'}
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
@@ -146,7 +183,7 @@ export default function AirfareIntelligencePage() {
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono text-slate-400">
             <Calendar className="w-3.5 h-3.5 text-sky-400" />
-            <span>Updated: {lastUpdated}</span>
+            <span>Updated: {lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} IST</span>
           </div>
 
           <button
