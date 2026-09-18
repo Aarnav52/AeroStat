@@ -1,5 +1,6 @@
 """Small Gemini tool-calling client for the AeroStat analyst API."""
 
+import json
 import logging
 import os
 from typing import Any, Dict, List, Optional
@@ -41,6 +42,11 @@ values or observations. Do not claim causation unless the available data
 directly supports it. Do not call route fare changes CPI contributions unless
 a tool explicitly provides contributions. Consider data-quality information
 when relevant. If the available tools cannot answer something, say so clearly.
+Return the final answer as a JSON object with exactly these fields:
+answer (string), key_findings (short list of factual findings), evidence
+(short list identifying the supporting tool results), and limitations (short
+list containing only relevant limitations). Keep simple factual answers
+concise. Do not include raw database payloads in these fields.
 """.strip()
 
 
@@ -76,7 +82,7 @@ class GeminiClient:
                 answer_text = "\n".join(part.get("text", "") for part in parts).strip()
                 if not answer_text:
                     raise GeminiClientError("Gemini returned neither text nor a function call")
-                return {"answer": answer_text, "tool_calls": tool_calls}
+                return self._format_response(answer_text, tool_calls)
 
             contents.append(candidate["content"])
             response_parts = []
@@ -96,6 +102,49 @@ class GeminiClient:
                 )
             contents.append({"role": "user", "parts": response_parts})
         raise GeminiClientError("Gemini exceeded the maximum number of tool-calling rounds")
+
+    def _format_response(self, answer_text: str, tool_calls: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Return the stable presentation shape while preserving tool calls."""
+        parsed_response = self._parse_json_response(answer_text)
+        if parsed_response is None:
+            response = {
+                "answer": answer_text,
+                "key_findings": [],
+                "evidence": [{"tool": call["tool_name"]} for call in tool_calls],
+                "limitations": [],
+            }
+        else:
+            response = {
+                "answer": parsed_response.get("answer")
+                if isinstance(parsed_response.get("answer"), str)
+                else answer_text,
+                "key_findings": parsed_response.get("key_findings")
+                if isinstance(parsed_response.get("key_findings"), list)
+                else [],
+                "evidence": parsed_response.get("evidence")
+                if isinstance(parsed_response.get("evidence"), list)
+                else [],
+                "limitations": parsed_response.get("limitations")
+                if isinstance(parsed_response.get("limitations"), list)
+                else [],
+            }
+        response["tool_calls"] = tool_calls
+        return response
+
+    @staticmethod
+    def _parse_json_response(answer_text: str) -> Optional[Dict[str, Any]]:
+        candidate_text = answer_text.strip()
+        if candidate_text.startswith("```"):
+            candidate_text = candidate_text.strip("`").strip()
+            if candidate_text.startswith("json"):
+                candidate_text = candidate_text[4:].strip()
+        try:
+            parsed_response = json.loads(candidate_text)
+        except (TypeError, ValueError):
+            return None
+        if not isinstance(parsed_response, dict):
+            return None
+        return parsed_response
 
     def _generate(self, contents: List[Dict[str, Any]]) -> Dict[str, Any]:
         payload = {
