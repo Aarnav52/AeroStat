@@ -1,7 +1,7 @@
 """
 Automation entrypoint: runs every scraper (SerpApi + the two compliant
-direct-airline scrapers) across every active route in the DB, for T+1
-and T+30 - the two booking windows this project has scoped to for now.
+direct-airline scrapers) across every active route in the DB, for
+whichever booking windows are requested (default: all of T+1/7/15/30/45).
 
 Not on a schedule yet (no cron/Airflow wired up) - this is the single
 command that does a full sweep when run, the piece a scheduler would
@@ -104,12 +104,34 @@ def run_spicejet(conn, route, window, target_date):
     return _store_flights(conn, flights, "SpiceJet Direct", route, window, target_date)
 
 
+def _run_pipeline_if_new_rows(inserted_count, label, summary):
+    if inserted_count <= 0:
+        logger.info(f"No new rows inserted in {label} phase - skipping pipeline run.")
+        return
+    try:
+        from app.services.pipeline_service import pipeline_service
+        logger.info(f"{label} phase inserted new rows - running cleaning + Jevons index pipeline...")
+        pipeline_result = pipeline_service.run_full_pipeline()
+        summary.setdefault("pipeline_runs", []).append({"phase": label, "result": pipeline_result})
+        logger.info(f"Pipeline run ({label}): {pipeline_result}")
+    except Exception as e:
+        logger.error(f"Post-{label} pipeline run failed (index_values not updated this cycle): {e}")
+        summary["errors"].append(f"pipeline/{label}: {e}")
+
+
 def run_full_sweep(route_limit=None, windows=None):
     """
     windows: subset of WINDOWS keys to sweep (e.g. ["T+1"]). None/omitted
     means all of them - kept so a scheduler can run T+1 and T+30 on
     independent cadences (T+1 changes fast, T+30 barely moves day to day)
     without hitting SerpApi/the direct scrapers for windows nobody asked for.
+
+    Two phases, run in that order: SerpApi (API call, seconds per route)
+    across every route first, then the direct Playwright scrapers for
+    Akasa/SpiceJet (much slower, and the source of the flaky retry loop)
+    across every route. This way real SerpApi data lands and the index
+    pipeline runs promptly instead of waiting behind the slow scrapers on
+    route 1 before route 2's fast SerpApi call even starts.
     """
     active_windows = {w: WINDOWS[w] for w in windows} if windows else WINDOWS
 
@@ -121,9 +143,11 @@ def run_full_sweep(route_limit=None, windows=None):
         if route_limit is not None:
             routes = routes[:route_limit]
 
+        # Phase 1: SerpApi across all routes - fast, so this pass alone
+        # gets real data onto the charts before the slow scrapers even start.
         for route in routes:
             origin, dest = route["origin_airport"].strip(), route["destination_airport"].strip()
-            logger.info(f"=== Route {origin}-{dest} (route_id={route['route_id']}) ===")
+            logger.info(f"=== [SerpApi] Route {origin}-{dest} (route_id={route['route_id']}) ===")
 
             try:
                 result = scraping_service.run_scrape(origin, dest, list(active_windows.keys()))
@@ -133,6 +157,14 @@ def run_full_sweep(route_limit=None, windows=None):
             except Exception as e:
                 logger.error(f"SerpApi failed for {origin}-{dest}: {e}")
                 summary["errors"].append(f"serpapi/{origin}-{dest}: {e}")
+
+        _run_pipeline_if_new_rows(summary["serpapi"], "serpapi", summary)
+
+        # Phase 2: direct Playwright scrapers (Akasa, SpiceJet) across all
+        # routes - slow and flaky, trickles in after the fast pass above.
+        for route in routes:
+            origin, dest = route["origin_airport"].strip(), route["destination_airport"].strip()
+            logger.info(f"=== [Direct] Route {origin}-{dest} (route_id={route['route_id']}) ===")
 
             for window, days_ahead in active_windows.items():
                 target_date = (today + datetime.timedelta(days=days_ahead)).isoformat()
@@ -153,19 +185,7 @@ def run_full_sweep(route_limit=None, windows=None):
                     logger.error(f"SpiceJet failed for {origin}-{dest} {window}: {e}")
                     summary["errors"].append(f"spicejet/{origin}-{dest}/{window}: {e}")
 
-    total_inserted = summary["serpapi"] + summary["akasa"] + summary["spicejet"]
-    if total_inserted > 0:
-        try:
-            from app.services.pipeline_service import pipeline_service
-            logger.info("Sweep inserted new rows - running cleaning + Jevons index pipeline so today's index_values point exists...")
-            pipeline_result = pipeline_service.run_full_pipeline()
-            summary["pipeline"] = pipeline_result
-            logger.info(f"Pipeline run: {pipeline_result}")
-        except Exception as e:
-            logger.error(f"Post-sweep pipeline run failed (index_values not updated this cycle): {e}")
-            summary["errors"].append(f"pipeline: {e}")
-    else:
-        logger.info("No new rows inserted this sweep - skipping pipeline run.")
+        _run_pipeline_if_new_rows(summary["akasa"] + summary["spicejet"], "direct_scrapers", summary)
 
     return summary
 
@@ -191,6 +211,8 @@ if __name__ == "__main__":
     print(f"SerpApi rows inserted:   {result['serpapi']}")
     print(f"Akasa rows inserted:     {result['akasa']}")
     print(f"SpiceJet rows inserted:  {result['spicejet']}")
+    if result.get("pipeline_runs"):
+        print(f"Pipeline runs:           {[p['phase'] for p in result['pipeline_runs']]}")
     if result["errors"]:
         print(f"\n{len(result['errors'])} errors:")
         for e in result["errors"]:

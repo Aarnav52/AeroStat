@@ -14,7 +14,10 @@ backend/
 ├── .env                          ← credentials (never commit)
 ├── requirements.txt
 ├── run_sweep_t1.bat              ← Task Scheduler entrypoint, T+1 (every 6h)
+├── run_sweep_t7.bat              ← Task Scheduler entrypoint, T+7
+├── run_sweep_t15.bat             ← Task Scheduler entrypoint, T+15
 ├── run_sweep_t30.bat             ← Task Scheduler entrypoint, T+30 (daily)
+├── run_sweep_t45.bat             ← Task Scheduler entrypoint, T+45
 ├── logs/                         ← sweep logs (gitignored)
 ├── test_polite_fetcher.py        ← 25 unit tests, fake transport, no real network
 ├── scripts/
@@ -34,8 +37,17 @@ backend/
     │   ├── flight_parser.py      ← SerpApi JSON → DB dict parser
     │   ├── direct_scrapers.py    ← Akasa Air / SpiceJet, routed through
     │   │                            PoliteFetcher, any route/date
-    │   ├── run_all_scrapers.py   ← full-sweep entrypoint (--window T+1/T+30,
-    │   │                            --limit N); what the .bat files call
+    │   ├── run_all_scrapers.py   ← full-sweep entrypoint (--window T+1/T+7/
+    │   │                            T+15/T+30/T+45, --limit N); what the
+    │   │                            .bat files call. run_full_sweep() is
+    │   │                            two phases: SerpApi across all routes
+    │   │                            first (fast, seconds/route), then the
+    │   │                            direct Playwright scrapers across all
+    │   │                            routes (slow, flaky) — so the slow
+    │   │                            scrapers on one route never block the
+    │   │                            fast SerpApi call on the next. Each
+    │   │                            phase runs the index pipeline
+    │   │                            afterward if it inserted rows.
     │   └── scrape_akasa_live.py, scrape_spicejet_live.py,
     │       demo_polite_fetcher_live.py
     │                            ← original single-route demo scripts,
@@ -43,7 +55,8 @@ backend/
     │                               run_all_scrapers.py but kept as minimal
     │                               standalone examples of the pattern
     ├── services/
-    │   ├── scraping_service.py   ← orchestrates the SerpApi T+1/T+30 scrape
+    │   ├── scraping_service.py   ← orchestrates the SerpApi scrape for a
+    │   │                            requested set of booking windows
     │   ├── fee_decomposition.py  ← tariff-schedule-derived base_fare/
     │   │                            taxes_fees/udf/gst_amount/fuel_surcharge
     │   └── index_service.py      ← ⚠ SEE "Jevons Index" SECTION BELOW —
@@ -68,6 +81,13 @@ Create `backend/.env`:
 ```env
 DATABASE_URL=postgresql://...   # Supabase connection string
 SERPAPI_KEY=...                 # SerpApi API key
+GROQ_API_KEY=...                # Groq API key, required for /analyst/* endpoints
+                                 # (AeroStat Analyst chat/tool-calling). Backend
+                                 # still starts and every other endpoint still
+                                 # works without it - only /analyst/* requests
+                                 # fail with a clean error if it's unset.
+GROQ_MODEL=openai/gpt-oss-120b  # optional, this is the default
+GROQ_MAX_TOOL_ROUNDS=8          # optional, this is the default
 ```
 
 Create `frontend/.env`:
@@ -121,11 +141,11 @@ Two collection paths, one shared write path (see `SIH26056_APIx_
 Architecture_and_Pipelines.md` one level above the repo for full diagrams):
 
 ```
-Windows Task Scheduler (run_sweep_t1.bat / run_sweep_t30.bat)
+Windows Task Scheduler (run_sweep_t1/t7/t15/t30/t45.bat)
         ↓
-  run_all_scrapers.py  (run_full_sweep — every active route)
-        ├──→ scraping_service.py → serpapi_client.py → flight_parser.py
-        └──→ direct_scrapers.py → polite_fetcher.py → Akasa/SpiceJet sites
+  run_all_scrapers.py  (run_full_sweep — every active route, two phases)
+        Phase 1 (fast, all routes) ──→ scraping_service.py → serpapi_client.py → flight_parser.py
+        Phase 2 (slow, all routes) ──→ direct_scrapers.py → polite_fetcher.py → Akasa/SpiceJet sites
         ↓                                   (both paths converge here)
   queries.py:
     1. same-IST-day dedup check (skip already-scraped flight+date+window)
