@@ -1,15 +1,56 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Plane, ArrowRight } from 'lucide-react';
 import Hero from './Hero';
 import PipelineSection from './PipelineSection';
 import VantaClouds from './VantaClouds';
 
+// Hides the header once the user scrolls down past a small threshold,
+// and brings it back as soon as they scroll up - so it doesn't eat
+// vertical space while reading but is always one scroll-up away.
+function useScrollDirection(threshold = 8) {
+  const [hidden, setHidden] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const lastY = useRef(0);
+
+  useEffect(() => {
+    lastY.current = window.scrollY;
+
+    const onScroll = () => {
+      const y = window.scrollY;
+      const delta = y - lastY.current;
+
+      setScrolled(y > 20);
+
+      if (y < 80) {
+        setHidden(false);
+      } else if (Math.abs(delta) > threshold) {
+        setHidden(delta > 0);
+      }
+
+      lastY.current = y;
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [threshold]);
+
+  return { hidden, scrolled };
+}
+
 export default function LandingPage({ onExploreDashboard }) {
+  const { hidden, scrolled } = useScrollDirection();
+
   return (
     <VantaClouds className="min-h-screen selection:bg-sky-500 selection:text-white">
-      
-      {/* Floating Header Bar */}
-      <header className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-8 py-3.5 flex items-center justify-between text-slate-900" style={{ background: 'transparent' }}>
+
+      {/* Floating Header Bar - hides on scroll down, reappears on scroll up */}
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 px-4 sm:px-8 py-3.5 flex items-center justify-between text-slate-900 transition-all duration-300 ${
+          hidden ? '-translate-y-full' : 'translate-y-0'
+        } ${
+          scrolled ? 'bg-white/80 backdrop-blur-md shadow-sm shadow-slate-900/5 border-b border-slate-200/60' : ''
+        }`}
+      >
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500 to-blue-600 flex items-center justify-center shadow-lg shadow-sky-500/20 text-white font-bold">
             <Plane className="w-4 h-4 stroke-[2.5]" />
