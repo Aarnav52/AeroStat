@@ -14,10 +14,10 @@ backend/
 ├── .env                          ← credentials (never commit)
 ├── requirements.txt
 ├── run_sweep_t1.bat              ← Task Scheduler entrypoint, T+1 (every 6h)
-├── run_sweep_t7.bat              ← Task Scheduler entrypoint, T+7
-├── run_sweep_t15.bat             ← Task Scheduler entrypoint, T+15
-├── run_sweep_t30.bat             ← Task Scheduler entrypoint, T+30 (daily)
-├── run_sweep_t45.bat             ← Task Scheduler entrypoint, T+45
+├── run_sweep_t7.bat              ← Task Scheduler entrypoint, T+7 (daily)
+├── run_sweep_t15.bat             ← Task Scheduler entrypoint, T+15 (every 36h)
+├── run_sweep_t30.bat             ← Task Scheduler entrypoint, T+30 (every 3 days)
+├── run_sweep_t45.bat             ← Task Scheduler entrypoint, T+45 (every 4 days)
 ├── logs/                         ← sweep logs (gitignored)
 ├── test_polite_fetcher.py        ← 25 unit tests, fake transport, no real network
 ├── scripts/
@@ -167,6 +167,23 @@ Frontend is live at: http://localhost:5173
 ---
 
 ## Data Flow
+
+Each booking window is swept on its own Task Scheduler cadence, tighter for
+windows closer to departure (where dynamic pricing moves fastest) and wider
+for windows further out (where fares are far more stable day-to-day, so
+polling them as often just adds unnecessary scrape volume):
+
+| Window | Cadence |
+|--------|---------|
+| T+1  | every 6h |
+| T+7  | daily |
+| T+15 | every 36h |
+| T+30 | every 3 days |
+| T+45 | every 4 days |
+
+These triggers live in Windows Task Scheduler, not in this repo (the `.bat`
+files themselves don't encode a schedule) - check/update them via
+`Get-ScheduledTask -TaskName "AeroStat Scrape T+*"` in PowerShell.
 
 Two collection paths, one shared write path (see `SIH26056_APIx_
 Architecture_and_Pipelines.md` one level above the repo for full diagrams):
