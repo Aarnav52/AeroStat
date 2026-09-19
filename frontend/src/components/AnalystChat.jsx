@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Sparkles, Send, Loader2, AlertCircle, ChevronDown, ChevronRight,
-  Lightbulb, ShieldAlert, Wrench,
+  Lightbulb, ShieldAlert, Wrench, X,
 } from 'lucide-react';
 import { postAnalystQuery } from '../api/apiService';
 
@@ -98,11 +98,21 @@ function AnswerCard({ entry }) {
 }
 
 // ─── Main Component ────────────────────────────────────────────────────────────
+// Renders as a modal popup (backdrop + centered panel), reachable from any
+// tab in the app rather than being a tab of its own - see App.jsx.
 
-export default function AnalystChat() {
+export default function AnalystChat({ onClose }) {
   const [question, setQuestion] = useState('');
   const [history, setHistory] = useState([]); // newest first: [{id, question, response?, error?}]
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') onClose?.();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -124,45 +134,58 @@ export default function AnalystChat() {
   };
 
   return (
-    <div className="py-24 bg-slate-950 text-slate-100 min-h-screen relative">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+    <div
+      className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 sm:p-6"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
+    >
+      <div className="w-full max-w-3xl max-h-[85vh] flex flex-col glass-elevated rounded-2xl border border-slate-800 shadow-2xl mt-8 sm:mt-0 overflow-hidden">
 
-        <div className="pb-6 border-b border-slate-800">
+        <div className="flex items-start justify-between gap-3 p-5 border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl glass-soft flex items-center justify-center text-sky-400 shrink-0">
               <Sparkles className="w-5 h-5" />
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-white font-sans tracking-tight">
-              AeroStat Analyst
-            </h2>
+            <div>
+              <h2 className="text-lg font-extrabold text-white font-sans tracking-tight">
+                AeroStat Analyst
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Every number comes from a deterministic tool call against the live database.
+              </p>
+            </div>
           </div>
-          <p className="text-sm text-slate-400 mt-2">
-            Ask a question about airfare CPI, routes, airlines, or data quality.
-            Every number here comes from a deterministic tool call against the
-            live database — the model only chooses which tool to run.
-          </p>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all shrink-0"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex items-center gap-2">
-          <input
-            type="text"
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            placeholder="e.g. How has the DEL-BOM index changed this week?"
-            disabled={loading}
-            className="flex-grow px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500 disabled:opacity-50"
-          />
-          <button
-            type="submit"
-            disabled={loading || !question.trim()}
-            className="flex items-center gap-1.5 px-4 py-3 text-xs font-bold rounded-xl text-white bg-sky-600 hover:bg-sky-500 border border-sky-500 transition-all disabled:opacity-50 shadow-md shrink-0"
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            {loading ? 'Thinking…' : 'Ask'}
-          </button>
-        </form>
+        <div className="p-5 shrink-0">
+          <form onSubmit={handleSubmit} className="flex items-center gap-2">
+            <input
+              type="text"
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              placeholder="e.g. How has the DEL-BOM index changed this week?"
+              disabled={loading}
+              autoFocus
+              className="flex-grow px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500 disabled:opacity-50"
+            />
+            <button
+              type="submit"
+              disabled={loading || !question.trim()}
+              className="flex items-center gap-1.5 px-4 py-3 text-xs font-bold rounded-xl text-white bg-sky-600 hover:bg-sky-500 border border-sky-500 transition-all disabled:opacity-50 shadow-md shrink-0"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              {loading ? 'Thinking…' : 'Ask'}
+            </button>
+          </form>
+        </div>
 
-        <div className="space-y-4">
+        <div className="px-5 pb-5 space-y-4 overflow-y-auto">
           {history.length === 0 && !loading && (
             <p className="text-sm text-slate-500 text-center py-12">
               No questions asked yet this session.

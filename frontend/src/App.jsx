@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Sparkles } from 'lucide-react';
 import LandingPage from './components/LandingPage';
 import Sidebar from './components/Sidebar';
 import AirfareIntelligencePage from './components/AirfareIntelligencePage';
@@ -12,6 +13,8 @@ import VantaClouds from './components/VantaClouds';
 export default function App() {
   // Always start on Landing / Preview Page first
   const [activeView, setActiveView] = useState('landing');
+  // Popup, not a tab - reachable from every view via the sidebar trigger
+  const [analystOpen, setAnalystOpen] = useState(false);
 
   // Handle transition into dashboard
   const handleExploreDashboard = () => {
@@ -56,10 +59,6 @@ export default function App() {
           <Dashboard initialTab={activeView === 'dashboard' ? 'macro' : activeView} />
         )}
 
-        {activeView === 'analyst' && (
-          <AnalystChat />
-        )}
-
         {activeView === 'methodology' && (
           <MethodologySection />
         )}
@@ -68,6 +67,20 @@ export default function App() {
           <PipelineSection />
         )}
       </main>
+
+      {/* AeroStat Analyst launcher - a floating icon, not a tab, so it never
+          takes space from or obstructs the sidebar's nav items or footer */}
+      <button
+        onClick={() => setAnalystOpen(true)}
+        title="AeroStat Analyst"
+        className="fixed bottom-24 left-4 lg:left-6 z-[60] w-12 h-12 lg:w-14 lg:h-14 rounded-full bg-gradient-to-tr from-sky-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/30 hover:scale-105 active:scale-95 transition-transform"
+      >
+        <Sparkles className="w-5 h-5 lg:w-6 lg:h-6" />
+      </button>
+
+      {analystOpen && (
+        <AnalystChat onClose={() => setAnalystOpen(false)} />
+      )}
 
     </div>
   );
