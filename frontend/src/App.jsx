@@ -5,6 +5,7 @@ import AirfareIntelligencePage from './components/AirfareIntelligencePage';
 import Hero from './components/Hero';
 import PipelineSection from './components/PipelineSection';
 import Dashboard from './components/Dashboard';
+import AnalystChat from './components/AnalystChat';
 import MethodologySection from './components/MethodologySection';
 import VantaClouds from './components/VantaClouds';
 
@@ -53,6 +54,10 @@ export default function App() {
 
         {(activeView === 'macro' || activeView === 'airlines' || activeView === 'telemetry' || activeView === 'live' || activeView === 'dashboard') && (
           <Dashboard initialTab={activeView === 'dashboard' ? 'macro' : activeView} />
+        )}
+
+        {activeView === 'analyst' && (
+          <AnalystChat />
         )}
 
         {activeView === 'methodology' && (

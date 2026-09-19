@@ -64,14 +64,35 @@ backend/
     └── api/
         ├── flights.py             ← GET /flights/  POST /flights/scrape
         ├── routes.py              ← GET /routes/
-        └── index.py               ← GET /index/  GET /index/summary
-                                       (currently backed by the placeholder
-                                       above, not jevons_engine/)
+        ├── index.py               ← GET /index/  GET /index/summary
+        │                              (currently backed by the placeholder
+        │                              above, not jevons_engine/)
+        └── analyst.py             ← GET/POST /analyst/* — see "AeroStat
+                                       Analyst" section below
 ```
 
 The real statistics engine, `jevons_engine/jevons_engine_cloud.py`, lives at
 the repo root (sibling of `backend/`, not inside it) — it's owned/maintained
 separately and is not yet wired to the API above (see below).
+
+`agents/` (repo root, sibling of `backend/`) holds the analyst's deterministic
+tool layer that `api/analyst.py` calls into:
+```
+agents/
+├── __init__.py
+└── tools/
+    ├── registry.py                ← TOOL_REGISTRY (name → schema + handler),
+    │                                  get_tool_schemas(), dispatch_tool()
+    ├── cpi_tools.py                ← get_latest_cpi/get_cpi_history/
+    │                                  compare_cpi_periods, reads index_values
+    ├── analysis_tools.py           ← route/airline/booking-window/cabin
+    │                                  breakdowns, reads cleaned_observations_table
+    └── quality_and_meta_tools.py   ← data quality summary, supporting
+                                       observations (evidence), route lookups
+```
+Every tool here is deterministic (plain DB queries) — Groq only ever picks
+*which* registered tool to call and with what arguments; it never computes
+a number itself. `tests/test_analyst.py` (repo root) covers this layer.
 
 ---
 
@@ -132,6 +153,16 @@ Frontend is live at: http://localhost:5173
 | POST | `/flights/scrape` | Trigger scrape `{"origin":"DEL","destination":"BOM","windows":["T+1","T+30"]}` |
 | GET | `/index/` | Jevons index series (`?route=DEL-BOM&window=T+1`) |
 | GET | `/index/summary` | Index for all windows (`?route=DEL-BOM`) |
+| GET | `/analyst/tools` | List registered analyst tool schemas |
+| POST | `/analyst/tools/execute` | Run one named tool directly, bypassing Groq `{"tool_name":"...","arguments":{...}}` |
+| POST | `/analyst/query` | Ask a natural-language question; Groq picks tools, returns `{answer, key_findings, evidence, limitations, tool_calls}`. Requires `GROQ_API_KEY`. Frontend: `AnalystChat.jsx` (Sidebar → "AeroStat Analyst"). |
+| GET | `/analyst/cpi/latest` | Latest index value (`?index_type=national\|route\|elementary&route_id=...&advance_booking_window=T+1`) |
+| GET | `/analyst/cpi/history` | Index time series, same filters as above |
+| POST | `/analyst/cpi/compare` | Compare two index dates `{"current_date":"...","previous_date":"...",...}` |
+| GET | `/analyst/analysis/routes` \| `/airlines` \| `/booking-windows` \| `/cabins` | Price breakdowns by that dimension |
+| GET | `/analyst/quality` | Data quality/coverage summary |
+| GET | `/analyst/observations` | Raw supporting flight observations (evidence for an analyst answer) |
+| GET | `/analyst/routes/{route_id}` | Human-readable metadata for one route |
 
 ---
 

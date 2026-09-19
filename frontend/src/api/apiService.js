@@ -43,3 +43,11 @@ export const fetchIndex = (route, window) => {
 // GET /index/summary?route=DEL-BOM
 export const fetchIndexSummary = (route) =>
   apiFetch(`/index/summary?route=${route}`);
+
+// POST /analyst/query
+export const postAnalystQuery = (question) =>
+  apiFetch('/analyst/query', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question }),
+  });

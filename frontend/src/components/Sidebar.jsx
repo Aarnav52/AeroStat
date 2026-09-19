@@ -20,6 +20,7 @@ export default function Sidebar({ activeView, setActiveView }) {
     { id: 'airlines', label: 'Airline Analytics', icon: Plane },
     { id: 'telemetry', label: 'Governance & Telemetry', icon: Activity },
     { id: 'live', label: 'Live Scraper', icon: Database, badge: 'LIVE' },
+    { id: 'analyst', label: 'AeroStat Analyst', icon: Sparkles, badge: 'NEW' },
     { id: 'methodology', label: 'Methodology', icon: FileText, badge: 'NEW' },
   ];
 
