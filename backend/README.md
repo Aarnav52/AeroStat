@@ -48,12 +48,11 @@ backend/
     │   │                            fast SerpApi call on the next. Each
     │   │                            phase runs the index pipeline
     │   │                            afterward if it inserted rows.
-    │   └── scrape_akasa_live.py, scrape_spicejet_live.py,
-    │       demo_polite_fetcher_live.py
-    │                            ← original single-route demo scripts,
-    │                               superseded by direct_scrapers.py +
-    │                               run_all_scrapers.py but kept as minimal
-    │                               standalone examples of the pattern
+    │   └── demo_polite_fetcher_live.py
+    │                            ← standalone PoliteFetcher demo against
+    │                               real sites (Akasa/SpiceJet + one
+    │                               confirmed-blocked site on purpose);
+    │                               not called by run_all_scrapers.py
     ├── services/
     │   ├── scraping_service.py   ← orchestrates the SerpApi scrape for a
     │   │                            requested set of booking windows
