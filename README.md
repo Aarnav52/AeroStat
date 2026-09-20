@@ -847,5 +847,297 @@ Third-party data keeps its own terms. Examples include the DGCA traffic mirror (
   Built for Smart India Hackathon 2026 · SIH26056 · Ministry of Statistics and Programme Implementation
 </p>
 
-## AI Analyst Development
-Initial branch setup for the AI-assisted analyst tooling.
+## Aerostat AI Analyst
+
+**A read-only, evidence-oriented natural-language analysis layer for AeroStat's airfare price-index system.**
+
+The AeroStat Analyst is not a separate data product. It is an additional backend capability that lets a user ask questions about the data already collected and indexed by AeroStat. Groq interprets the question and selects registered tools; the tools execute deterministic, parameterized PostgreSQL queries against Supabase; and the API returns a structured answer with findings, evidence, limitations, and an audit trail of tool calls.
+
+> **Implementation status:** the Analyst API, ten deterministic analytical tools, tool registry, Groq tool-calling loop, structured response model, and read-only database access are implemented. The Analyst does not scrape, write to the database, calculate values inside the LLM, or implement future forecasting and anomaly-detection ideas.
+
+---
+
+## Table of Contents
+
+- [Role in AeroStat](#role-in-aerostat)
+- [Current Architecture](#current-architecture)
+- [Implemented Analytical Tools](#implemented-analytical-tools)
+- [Tool Registry](#tool-registry)
+- [LLM and Groq Integration](#llm-and-groq-integration)
+- [FastAPI API](#fastapi-api)
+- [Structured Response](#structured-response)
+- [Database Interaction and Evidence](#database-interaction-and-evidence)
+- [Installation and Setup](#installation-and-setup)
+- [Configuration](#configuration)
+- [Running](#running)
+- [Testing](#testing)
+- [Current Limitations](#current-limitations)
+- [Future and Planned Work](#future-and-planned-work)
+
+---
+
+## Role in AeroStat
+
+AeroStat collects domestic airfare observations through its SerpApi and direct-airline collection paths, persists them in Supabase/PostgreSQL, and exposes the collection and index APIs through FastAPI. The Analyst sits above that existing data layer:
+
+```text
+flight_observations / cleaned_observations_table / index_values
+                              ↓
+                     deterministic tools
+                              ↓
+                    tool registry + schemas
+                              ↓
+                 Groq tool-calling orchestration
+                              ↓
+               structured Analyst API response
+                              ↓
+                    AeroStat Analyst UI/client
+```
+
+The Analyst uses the project's existing terminology: routes such as `DEL-BOM`, booking windows such as `T+1` and `T+30`, the `index_values` table, `cleaned_observations_table`, and AeroStat's route, airline, cabin, and CPI/index concepts.
+
+It complements the existing `/routes/`, `/flights/`, and `/index/` resources. It does not replace the scraper, fee-decomposition pipeline, or Jevons engine.
+
+## Current Architecture
+
+The implementation is split across two locations:
+
+| Layer | Location | Responsibility |
+|---|---|---|
+| FastAPI integration | `backend/app/api/analyst.py` | Registers `/analyst/*` routes, validates request parameters, invokes tools, and runs the Groq conversation loop |
+| Tool package | `agents/tools/` | Read-only deterministic analytical functions |
+| Registry | `agents/tools/registry.py` | Stores tool names, schemas, handlers, schema generation, and dispatch |
+| CPI tools | `agents/tools/cpi_tools.py` | Reads and compares rows from `index_values` |
+| Breakdown tools | `agents/tools/analysis_tools.py` | Reads price breakdowns from `cleaned_observations_table` |
+| Quality and metadata tools | `agents/tools/quality_and_meta_tools.py` | Returns quality summaries, supporting observations, and route metadata |
+| Database connection | `backend/app/db/connection.py` | Provides the existing PostgreSQL/Supabase connection context |
+
+The normal natural-language path is:
+
+1. A client sends a question to `POST /analyst/query`.
+2. FastAPI supplies Groq with the registered tool schemas and the Analyst system instructions.
+3. Groq can request one or more registered tools with JSON arguments.
+4. The registry dispatches each requested tool to its deterministic Python handler.
+5. The handler executes a read-only, parameterized SQL query through the existing database connection.
+6. Tool results are returned to Groq as tool messages.
+7. Groq may request additional tools, up to the configured maximum tool rounds, so a question can be answered through multi-tool reasoning.
+8. The final response is normalized into the Analyst response shape and includes the tool-call audit information and evidence returned by the tools.
+
+The LLM chooses tools and explains results. It is not the source of numerical truth: calculations such as changes, percentages, aggregations, and coverage values are performed by deterministic tool code or SQL.
+
+## Implemented Analytical Tools
+
+The repository currently provides ten registered analytical tools.
+
+### CPI and index tools
+
+1. **`get_latest_cpi`** — Retrieves the latest matching observation from `index_values`. It supports the implemented index filters, including `national`, `route`, or `elementary`, optional `route_id`, and optional `advance_booking_window`.
+2. **`get_cpi_history`** — Retrieves the index time series from `index_values` using the same index, route, and booking-window dimensions.
+3. **`compare_cpi_periods`** — Compares two requested index dates and returns the current and previous observations, absolute change, percentage change, and explicit statuses for missing observations, null values, identical dates, or division by zero.
+
+### Deterministic breakdown tools
+
+4. **Route breakdown** — Returns airfare analysis grouped by route from `cleaned_observations_table`.
+5. **Airline breakdown** — Returns airfare analysis grouped by airline from `cleaned_observations_table`.
+6. **Booking-window breakdown** — Returns airfare analysis grouped by advance booking window from `cleaned_observations_table`.
+7. **Cabin breakdown** — Returns airfare analysis grouped by cabin class from `cleaned_observations_table`.
+
+The four breakdown operations are exposed by the corresponding analysis-tool handlers and API routes for routes, airlines, booking windows, and cabins. They are read-only database analyses; they do not infer unsupported business explanations.
+
+### Quality, evidence, and metadata tools
+
+8. **Data-quality summary** — Returns the implemented data quality and coverage summary.
+9. **Supporting observations** — Returns raw supporting flight observations that can be used as evidence for an Analyst answer.
+10. **Route lookup** — Returns human-readable metadata for one route by `route_id`.
+
+The exact accepted arguments and JSON schemas are available at `GET /analyst/tools`. Use those schemas as the authoritative interface rather than assuming undocumented arguments.
+
+
+## Tool Registry
+
+`agents/tools/registry.py` is the single registry for Analyst capabilities. A registry entry associates a public tool name with its JSON schema and deterministic handler. The registry exposes functions for:
+
+- returning the schemas supplied to Groq;
+- dispatching a named tool with validated arguments; and
+- keeping the LLM-visible tool interface separate from database implementation details.
+
+`POST /analyst/tools/execute` uses the same registry directly. This is useful for testing or for a trusted client that already knows which analytical operation it needs; it bypasses Groq and does not perform natural-language reasoning.
+
+New tools must be registered before they can be called by Groq. An unregistered function is not part of the Analyst API, even if it exists elsewhere in the repository.
+
+## LLM and Groq Integration
+
+The current integration uses Groq's chat-completions tool-calling interface. The backend reads `GROQ_API_KEY`, uses `GROQ_MODEL` when provided, and passes the registered tool schemas to the model. The default model configured by the backend is `openai/gpt-oss-120b`; the deployed value should always be confirmed from `backend/app/config.py` and the environment.
+
+The orchestration is bounded by `GROQ_MAX_TOOL_ROUNDS`, whose default is `8`. A question can therefore involve multiple tool calls, for example an index lookup followed by a comparison or supporting-observation lookup. The bound prevents an unending tool loop.
+
+If `GROQ_API_KEY` is absent, the backend can still start and the non-Analyst AeroStat endpoints remain available. Analyst query requests fail with a clean configuration error because natural-language orchestration requires Groq.
+
+Groq is not used by the deterministic tools. Database queries and analytical calculations remain in the Python/SQL layer, which makes direct tool execution testable without calling an external LLM.
+
+## FastAPI API
+
+The Analyst routes are mounted by the existing FastAPI application in `backend/app/main.py`.
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/analyst/tools` | List the registered tool schemas |
+| `POST` | `/analyst/tools/execute` | Execute one named tool directly with `tool_name` and `arguments` |
+| `POST` | `/analyst/query` | Ask a natural-language question; Groq selects tools and returns a structured answer |
+| `GET` | `/analyst/cpi/latest` | Read the latest index observation with index, route, and booking-window filters |
+| `GET` | `/analyst/cpi/history` | Read the matching index history |
+| `POST` | `/analyst/cpi/compare` | Compare two index dates |
+| `GET` | `/analyst/analysis/routes` | Return route-level breakdowns |
+| `GET` | `/analyst/analysis/airlines` | Return airline-level breakdowns |
+| `GET` | `/analyst/analysis/booking-windows` | Return booking-window breakdowns |
+| `GET` | `/analyst/analysis/cabins` | Return cabin-level breakdowns |
+| `GET` | `/analyst/quality` | Return the data quality and coverage summary |
+| `GET` | `/analyst/observations` | Return supporting flight observations |
+| `GET` | `/analyst/routes/{route_id}` | Return metadata for one route |
+
+The natural-language request body and exact response model are defined in the backend implementation. Use FastAPI's generated documentation at `/docs` as the authoritative request-schema reference.
+## Structured Response
+
+`POST /analyst/query` returns the implemented structured Analyst shape:
+
+```json
+{
+  "answer": "Human-readable answer grounded in the tool results.",
+  "key_findings": [],
+  "evidence": [],
+  "limitations": [],
+  "tool_calls": []
+}
+```
+
+The fields serve these purposes:
+
+- `answer`: the final natural-language response;
+- `key_findings`: concise findings extracted from the analysis;
+- `evidence`: supporting values or observations returned by the tools;
+- `limitations`: missing data, scope caveats, or other limitations identified by the implementation;
+- `tool_calls`: the tools and arguments used during the request, providing an execution trace.
+
+Do not describe this as a citation system or a forecasting report generator. The implemented evidence is the database-backed tool output and the supporting observations returned by the current tools.
+
+
+## Database Interaction and Evidence
+
+The Analyst is read-only. Its tools use parameterized SQL through the existing `get_db_connection` path. They do not perform `INSERT`, `UPDATE`, `DELETE`, or DDL operations.
+
+The main data sources are:
+
+- `index_values` for persisted CPI/index observations;
+- `cleaned_observations_table` for analytical airfare breakdowns; and
+- the existing route and flight-observation data used by metadata, quality, and supporting-evidence operations.
+
+The Analyst does not run the scraper, recompute the full Jevons engine, repair missing data, or fabricate fee components. It reports what is present in the database and should preserve the existing AeroStat caveat that the live `/index/` endpoint and the validated `jevons_engine/` output are not automatically interchangeable until the documented reconnection work is complete.
+
+## Installation and Setup
+
+Set up AeroStat's backend using the existing project instructions:
+
+```bash
+cd backend
+python -m venv .venv
+
+# Windows
+.venv\\Scripts\\activate
+
+# macOS / Linux
+source .venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+The Analyst imports the backend database connection and must be run with the repository root available on `PYTHONPATH` when starting the backend from the `backend` directory.
+
+The database must contain the AeroStat schema and the tables required by the selected tool. In particular, CPI tools require `index_values`, and analysis tools require the cleaned observation data used by their queries.
+
+## Configuration
+
+Create `backend/.env` and provide the existing AeroStat database and model settings:
+
+```dotenv
+DATABASE_URL=postgresql://<user>:<password>@<host>:5432/<database>
+SERPAPI_KEY=<your-serpapi-key>
+GROQ_API_KEY=<your-groq-api-key>
+GROQ_MODEL=openai/gpt-oss-120b
+GROQ_MAX_TOOL_ROUNDS=8
+```
+
+`SERPAPI_KEY` is used by the collection system; it is not required for a read-only Analyst query once the database is populated. `GROQ_API_KEY` is required for `/analyst/query`. `GROQ_MODEL` and `GROQ_MAX_TOOL_ROUNDS` are optional because the backend supplies defaults.
+
+Never commit `.env` files or API keys.
+
+## Running
+
+From the backend directory:
+
+```bash
+cd backend
+PYTHONPATH=. uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+The API is available at `http://localhost:8000`, with interactive documentation at `http://localhost:8000/docs`.
+
+Inspect the available tools:
+
+```bash
+curl http://localhost:8000/analyst/tools
+```
+
+Execute a deterministic tool directly:
+
+```bash
+curl -X POST http://localhost:8000/analyst/tools/execute \
+  -H "Content-Type: application/json" \
+  -d '{"tool_name":"get_latest_cpi","arguments":{"index_type":"national"}}'
+```
+
+Ask a natural-language question:
+
+```bash
+curl -X POST http://localhost:8000/analyst/query \
+  -H "Content-Type: application/json" \
+  -d '{"question":"What is the latest national airfare index?"}'
+```
+
+The frontend's `AnalystChat.jsx`, available from the Sidebar as **AeroStat Analyst**, consumes the natural-language endpoint. The Analyst remains usable as a backend API independently of that UI.
+
+## Testing
+
+Run the project's Python tests from the repository root or backend environment according to the repository test layout. The Analyst deterministic layer is covered by `tests/test_analyst.py`. These tests should cover registry behavior, tool dispatch, deterministic calculations, validation, missing-data statuses, and the read-only tool boundary.
+
+The existing `backend/test_polite_fetcher.py` suite covers the collection compliance gate and is separate from the Analyst tests. It does not validate Groq responses.
+
+Tests for the natural-language path should mock the Groq boundary rather than require a live API key. A live Groq call is an integration check, not a deterministic unit test.
+
+## Current Limitations
+
+- `/analyst/query` depends on a valid `GROQ_API_KEY` and network access to Groq.
+- The quality of answers is bounded by the current database contents, schema coverage, and the deterministic tools that are registered.
+- The LLM can select and sequence tools, but it cannot answer questions requiring an unimplemented tool.
+- Tool execution is read-only; the Analyst cannot correct, enrich, or backfill AeroStat data.
+- The tool loop has a maximum of eight rounds by default.
+- The current feature is analytical retrieval and explanation, not a general-purpose SQL agent or arbitrary code-execution environment.
+- Supporting evidence is limited to the observations and metadata exposed by the implemented tools.
+- The Analyst should retain AeroStat's existing index caveats: the live `/index/` API has historically been backed by a placeholder ratio-of-arithmetic-means calculation while the validated Jevons engine and `index_values` reconnection remain separate implementation concerns.
+- No claim should be made that the Analyst independently validates GEKS-Jevons, applies new booking-window weights, or produces a MoSPI CPI overlay.
+
+## Future and Planned Work
+
+The following are future or planned capabilities, not current Analyst features:
+
+- anomaly and price-spike detection;
+- forecasting or an explainable “book now or wait” indicator;
+- MoSPI CPI overlay analysis;
+- richer statistical diagnostics and sensitivity analysis;
+- additional registered tools for future AeroStat tables and index outputs; and
+- broader multi-turn analyst memory or user-specific workspaces.
+
+These items must remain labeled as planned until corresponding code, tests, API behavior, and configuration exist in the repository.
+
+---
+
+The AeroStat Analyst follows the project's central integrity rule: **the model may choose the analysis, but deterministic code and database evidence supply the numbers.**
